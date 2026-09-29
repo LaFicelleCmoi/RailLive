@@ -25,10 +25,10 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow && <p className="eyebrow mb-2">{eyebrow}</p>}
-        <h1 className="text-2xl font-semibold tracking-tight text-ink-50 md:text-[28px]">{title}</h1>
+        <h1 className="text-[22px] leading-tight font-semibold tracking-tight break-words text-ink-50 sm:text-2xl md:text-[28px]">{title}</h1>
         {description && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-400">{description}</p>}
         {endpoints.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-3 hidden flex-wrap gap-1.5 sm:flex">
             {endpoints.map((e) => (
               <code
                 key={e}

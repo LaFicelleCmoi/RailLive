@@ -30,14 +30,14 @@ export function StationPicker({ className, withChips = true }: { className?: str
         onChange={(p) => setStop(p?.id)}
       />
       {withChips && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="scroll-x -mx-3.5 gap-1.5 px-3.5 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {MAJOR_STATIONS.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setStop(s.id)}
               className={clsx(
-                'rounded-full border px-3 py-1 text-xs transition-colors',
+                'shrink-0 rounded-full border px-3 py-1.5 text-xs whitespace-nowrap transition-colors sm:py-1',
                 s.id === stop
                   ? 'border-info-500/50 bg-info-500/12 text-info-300'
                   : 'border-white/[0.08] text-ink-400 hover:border-white/15 hover:text-ink-100',

@@ -127,7 +127,7 @@ export default function CatalogPage() {
         endpoint={[`/${type}?count=&start_page=`, isSearchable(type) ? '/pt_objects · /places' : 'filtre local']}
       />
 
-      <div className="-mx-1 mb-4 flex gap-1 overflow-x-auto px-1 pb-1">
+      <div className="scroll-x -mx-3.5 mb-4 gap-1 px-3.5 pb-1 sm:-mx-1 sm:px-1">
         {TYPES.map((t) => (
           <NavLink
             key={t.type}

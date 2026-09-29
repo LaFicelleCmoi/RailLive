@@ -3,7 +3,7 @@ import type { FeatureCollection } from 'geojson';
 import { Target } from 'lucide-react';
 import { MapView } from '@/components/map/MapView';
 import { EMPTY_FC, FitBounds, GeoJsonLayer, pointsFC } from '@/components/map/layers';
-import { SidePanel } from '@/components/ui/SidePanel';
+import { SidePanel, useMapPadding } from '@/components/ui/SidePanel';
 import { EmptyState, ErrorState } from '@/components/ui/States';
 import { FilterChip } from '@/components/ui/Segmented';
 import { OriginControls, useOrigin } from '@/components/OriginControls';
@@ -26,6 +26,7 @@ export default function IsochronesPage() {
   const iso = useIsochrones(from, bounds, datetime);
   const sa = useStopArea(from);
   const origin = toLngLat(sa.data?.coord);
+  const mapPadding = useMapPadding();
 
   const fc = useMemo<FeatureCollection>(() => {
     if (!iso.data?.length) return EMPTY_FC;
@@ -76,7 +77,7 @@ export default function IsochronesPage() {
             { id: 'iso-origin-dot', type: 'circle', paint: { 'circle-radius': 6, 'circle-color': '#e9edf3', 'circle-stroke-color': '#05080f', 'circle-stroke-width': 2 } },
           ]}
         />
-        <FitBounds points={allPoints.length ? allPoints : origin ? [origin] : []} padding={{ top: 60, bottom: 60, left: 440, right: 60 }} maxZoom={9} />
+        <FitBounds points={allPoints.length ? allPoints : origin ? [origin] : []} padding={mapPadding} maxZoom={9} />
       </MapView>
 
       <SidePanel

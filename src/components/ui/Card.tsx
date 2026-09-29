@@ -27,7 +27,7 @@ export function Card({
       className={clsx('panel overflow-hidden', className)}
     >
       {(title || actions || eyebrow) && (
-        <header className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-3.5">
+        <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/[0.06] px-4 py-3 sm:px-5 sm:py-3.5">
           <div className="min-w-0">
             {eyebrow && <p className="eyebrow mb-0.5 text-[10px]">{eyebrow}</p>}
             {title && <h2 className="truncate text-sm font-semibold text-ink-100">{title}</h2>}
@@ -35,7 +35,7 @@ export function Card({
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </header>
       )}
-      <div className={clsx('p-5', bodyClassName)}>{children}</div>
+      <div className={clsx('p-4 sm:p-5', bodyClassName)}>{children}</div>
     </motion.section>
   );
 }

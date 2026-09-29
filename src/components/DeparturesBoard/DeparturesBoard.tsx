@@ -89,8 +89,8 @@ export function DeparturesBoard({ rows, type }: { rows: BoardRow[]; type: BoardT
           {sorted.map((r, i) => {
             const content = (
               <>
-                <div className="flex items-baseline gap-2">
-                  <span className={clsx('led text-[26px] leading-none font-black tabular', r.cancelled ? 'text-ink-500 line-through' : r.delay > 0 ? 'text-alert-400' : 'text-wait-300')}>
+                <div className="row-span-2 flex flex-col items-start gap-0.5 self-start md:row-span-1 md:flex-row md:items-baseline md:gap-2 md:self-auto">
+                  <span className={clsx('led text-[24px] leading-none font-black tabular md:text-[26px]', r.cancelled ? 'text-ink-500 line-through' : r.delay > 0 ? 'text-alert-400' : 'text-wait-300')}>
                     {r.delay > 0 && !r.cancelled ? r.time : r.baseTime}
                   </span>
                   {r.delay > 0 && !r.cancelled && <span className="font-mono text-xs text-ink-500 line-through">{r.baseTime}</span>}
@@ -98,18 +98,18 @@ export function DeparturesBoard({ rows, type }: { rows: BoardRow[]; type: BoardT
                 <div className="hidden md:block">
                   <Status row={r} />
                 </div>
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="col-start-2 flex min-w-0 items-center gap-2 md:col-start-auto">
                   <span
-                    className="rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap uppercase"
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide whitespace-nowrap uppercase"
                     style={{ background: `${MODE_META[r.mode].color}22`, color: MODE_META[r.mode].color }}
                     title={r.brand}
                   >
                     {r.brand.length > 10 ? MODE_META[r.mode].short : r.brand}
                   </span>
-                  <span className="font-mono text-sm text-ink-200">{r.number}</span>
+                  <span className="truncate font-mono text-sm text-ink-200">{r.number}</span>
                 </div>
-                <div className="min-w-0">
-                  <p className={clsx('led truncate text-[19px] leading-tight font-bold uppercase', r.cancelled ? 'text-ink-500' : 'text-ink-50')}>{r.destination}</p>
+                <div className="col-start-2 min-w-0 md:col-start-auto">
+                  <p className={clsx('led truncate text-[17px] leading-tight font-bold uppercase md:text-[19px]', r.cancelled ? 'text-ink-500' : 'text-ink-50')}>{r.destination}</p>
                   <div className="mt-1 flex items-center gap-2 md:hidden">
                     <Status row={r} />
                   </div>
@@ -127,7 +127,7 @@ export function DeparturesBoard({ rows, type }: { rows: BoardRow[]; type: BoardT
               </>
             );
             const cls =
-              'group grid grid-cols-[88px_1fr] items-center gap-x-4 gap-y-1 px-5 py-3 transition-colors md:grid-cols-[92px_110px_150px_1fr_64px_28px] md:gap-4';
+              'group grid grid-cols-[72px_minmax(0,1fr)] items-center gap-x-3 gap-y-1 px-3.5 py-3 transition-colors sm:px-5 md:grid-cols-[92px_110px_150px_1fr_64px_28px] md:gap-4';
             return (
               <motion.li
                 key={r.key}

@@ -20,7 +20,7 @@ export function Segmented<T extends string | number>({
 }) {
   const id = useId();
   return (
-    <div role="radiogroup" aria-label={label} className={clsx('inline-flex rounded-lg border border-white/[0.08] bg-night-900/60 p-0.5', className)}>
+    <div role="radiogroup" aria-label={label} className={clsx('inline-flex max-w-full overflow-x-auto rounded-lg border border-white/[0.08] bg-night-900/60 p-0.5', className)}>
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -65,7 +65,7 @@ export function FilterChip({
       aria-pressed={active}
       onClick={onClick}
       className={clsx(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all',
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all sm:py-1',
         active ? 'border-white/15 bg-white/[0.07] text-ink-50' : 'border-white/[0.06] text-ink-500 hover:text-ink-300',
       )}
     >

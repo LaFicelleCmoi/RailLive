@@ -5,13 +5,12 @@ import { ArrowRight, Crosshair, LocateFixed, MapPin, MousePointerClick, Navigati
 import clsx from 'clsx';
 import { MAP_FONT, MapView, useMap } from '@/components/map/MapView';
 import { FitBounds, GeoJsonLayer, Popup, pointsFC, EMPTY_FC } from '@/components/map/layers';
-import { SidePanel } from '@/components/ui/SidePanel';
+import { SidePanel, useMapPadding } from '@/components/ui/SidePanel';
 import { Button } from '@/components/ui/Button';
 import { ErrorState, SkeletonRows, EmptyState } from '@/components/ui/States';
 import { PlaceAutocomplete, type PickedPlace } from '@/components/SearchBox/PlaceAutocomplete';
 import { usePlacesNearby, useReverseGeocode } from '@/api/hooks/search';
 import { formatDistance, haversine, toLngLat, type LngLat } from '@/utils/geo';
-import { useMediaQuery } from '@/utils/hooks';
 
 const DISTANCES = [1000, 2000, 5000, 10_000];
 
@@ -38,7 +37,7 @@ export default function SearchPage() {
   const [geoError, setGeoError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
-  const desktop = useMediaQuery('(min-width: 1024px)');
+  const mapPadding = useMapPadding();
 
   const nearby = usePlacesNearby(urlCenter, distance);
   const reverse = useReverseGeocode(clicked);
@@ -146,7 +145,7 @@ export default function SearchPage() {
           <FitBounds
             points={[...(urlCenter ? [urlCenter] : []), ...stations.map((s) => s.lngLat)]}
             maxZoom={14}
-            padding={desktop ? { top: 60, bottom: 60, left: 440, right: 60 } : { top: 40, bottom: 320, left: 30, right: 30 }}
+            padding={mapPadding}
           />
         )}
         <Popup at={clicked} onClose={() => setClicked(null)}>

@@ -178,20 +178,26 @@ export default function LiveMapPage() {
       </MapView>
 
       {/* Barre de contrôle */}
-      <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-col gap-2 md:inset-x-4 md:top-4">
+      <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex flex-col gap-2 sm:inset-x-3 sm:top-3 md:inset-x-4 md:top-4">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="panel pointer-events-auto flex flex-wrap items-center gap-x-4 gap-y-2 self-start bg-night-800/85 px-4 py-3"
+          className="panel pointer-events-auto flex max-w-full flex-col gap-2 self-stretch bg-night-800/85 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:self-start sm:px-4 sm:py-3"
         >
-          <div>
-            <p className="eyebrow text-[10px]">Module 5 · Carte live</p>
-            <p className="flex items-center gap-2 text-sm font-semibold text-ink-50">
-              <LiveDot /> {visible.toLocaleString('fr-FR')} trains
-              {delayed > 0 && <span className="text-xs font-medium text-alert-300">· {delayed} en retard</span>}
-            </p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow hidden text-[10px] sm:block">Module 5 · Carte live</p>
+              <p className="flex items-center gap-2 text-sm font-semibold text-ink-50">
+                <LiveDot /> {visible.toLocaleString('fr-FR')} trains
+                {delayed > 0 && <span className="text-xs font-medium text-alert-300">· {delayed} en retard</span>}
+              </p>
+            </div>
+            <span className="flex items-center gap-1.5 text-[11px] text-ink-500 sm:hidden">
+              {live.isFetching && <Loader2 className="size-3.5 animate-spin" />}
+              {updated}
+            </span>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="scroll-x -mx-1 gap-1.5 px-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
             {LIVE_MODES.map((m) => (
               <FilterChip
                 key={m}
@@ -211,22 +217,26 @@ export default function LiveMapPage() {
               </FilterChip>
             ))}
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-ink-500">
+          <div className="hidden items-center gap-2 text-[11px] text-ink-500 sm:flex">
             {live.isFetching ? <Loader2 className="size-3.5 animate-spin" /> : null}
             {updated && <span>Données {updated}</span>}
           </div>
         </motion.div>
 
-        <div className="pointer-events-auto flex flex-wrap gap-2 self-start">
+        <div className="pointer-events-auto flex flex-wrap gap-1.5 self-start sm:gap-2">
           <span
-            className="inline-flex items-center gap-1.5 rounded-full border border-wait-500/30 bg-night-900/85 px-3 py-1 text-[11px] font-medium text-wait-300 backdrop-blur"
-            title="L’API SNCF ne fournit pas de position GPS : chaque train est placé par interpolation entre ses deux gares encadrantes, d’après les horaires temps réel."
+            className="inline-flex items-center gap-1.5 rounded-full border border-wait-500/30 bg-night-900/85 px-2.5 py-1 text-[11px] font-medium text-wait-300 backdrop-blur sm:px-3"
+            title="L’API SNCF ne fournit pas de position GPS : chaque train est placé le long des voies d’après les horaires temps réel."
           >
-            <Info className="size-3.5" /> Positions estimées à partir des horaires, pas de GPS
+            <Info className="size-3.5 shrink-0" />
+            <span className="sm:hidden">Positions estimées</span>
+            <span className="hidden sm:inline">Positions estimées à partir des horaires, pas de GPS</span>
           </span>
           {view && view.zoom < 8 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-night-900/85 px-3 py-1 text-[11px] text-ink-400 backdrop-blur">
-              <ZoomIn className="size-3.5" /> Zoomez pour afficher TER et RER / Transilien
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-night-900/85 px-2.5 py-1 text-[11px] text-ink-400 backdrop-blur sm:px-3">
+              <ZoomIn className="size-3.5 shrink-0" />
+              <span className="sm:hidden">Zoomez : TER / RER</span>
+              <span className="hidden sm:inline">Zoomez pour afficher TER et RER / Transilien</span>
             </span>
           )}
         </div>

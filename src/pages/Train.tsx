@@ -140,8 +140,9 @@ export default function TrainPage() {
         }
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:items-start">
         <Card
+          className="lg:col-start-1 lg:row-span-2 lg:row-start-1"
           title="Marche du train"
           eyebrow={first && last ? `${valid.length} arrêts · ${formatDuration((last.arr.getTime() - first.dep.getTime()) / 1000)}` : undefined}
           actions={
@@ -153,8 +154,9 @@ export default function TrainPage() {
           {vjQ.isLoading ? <SkeletonRows rows={8} /> : <Timeline items={items} now={now} color={color} />}
         </Card>
 
-        <div className="space-y-5">
-          <div className="panel h-72 overflow-hidden p-0">
+        {/* Carte : en tête sur mobile, colonne de droite sur desktop */}
+        <div className="order-first space-y-2 lg:order-none lg:col-start-2 lg:row-start-1">
+          <div className="panel h-56 overflow-hidden p-0 sm:h-72">
             <MapView className="h-full" bare>
               <GeoJsonLayer
                 id="train-path"
@@ -180,12 +182,15 @@ export default function TrainPage() {
               <FitBounds points={railLine} padding={30} maxZoom={11} />
             </MapView>
           </div>
-          <p className="-mt-3 flex items-center gap-1.5 text-[11px] text-ink-500">
-            <MapPinned className="size-3.5" /> Position estimée le long des voies d’après les horaires (pas de GPS).
-            <Link to={`/live`} className="ml-auto text-info-300 hover:text-info-400">
+          <p className="flex items-center gap-1.5 text-[11px] text-ink-500">
+            <MapPinned className="size-3.5 shrink-0" /> Position estimée le long des voies d’après les horaires (pas de GPS).
+            <Link to={`/live`} className="ml-auto shrink-0 text-info-300 hover:text-info-400">
               Carte live →
             </Link>
           </p>
+        </div>
+
+        <div className="space-y-5 lg:col-start-2">
 
           {tl && tl.disruptions.length > 0 && (
             <Card title={<span className="flex items-center gap-2"><AlertTriangle className="size-4 text-wait-400" /> Perturbations</span>}>

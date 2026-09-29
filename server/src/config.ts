@@ -30,14 +30,28 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+/** Exécution en fonction serverless Vercel */
+const isServerless = !!process.env.VERCEL;
+
+/** Domaines Vercel du déploiement courant, autorisés automatiquement en CORS. */
+const vercelOrigins = [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]
+  .filter((h): h is string => !!h)
+  .map((h) => `https://${h}`);
+
 export const config = Object.freeze({
   ...parsed.data,
+  // Derrière le proxy de Vercel, l'IP réelle est dans X-Forwarded-For (nécessaire au rate limiting)
+  TRUST_PROXY: isServerless && !process.env.TRUST_PROXY ? 1 : parsed.data.TRUST_PROXY,
   /** L'API SNCF n'expose qu'une couverture : « sncf ». */
   COVERAGE: 'sncf',
-  allowedOrigins: parsed.data.ALLOWED_ORIGIN.split(',')
-    .map((o) => o.trim())
-    .filter(Boolean),
+  allowedOrigins: [
+    ...parsed.data.ALLOWED_ORIGIN.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
+    ...vercelOrigins,
+  ],
   isProd: parsed.data.NODE_ENV === 'production',
+  isServerless,
 });
 
 /** Valeurs sensibles à masquer dans tout log ou message d'erreur. */

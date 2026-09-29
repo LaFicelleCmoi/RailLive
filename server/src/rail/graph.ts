@@ -20,7 +20,8 @@ const USABLE = new Set(['Exploitée', 'S9A3 - Ligne en travaux']);
 const REFRESH_MS = 30 * 24 * 3600_000;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.resolve(here, '../../data');
+// Sur Vercel, seul /tmp est inscriptible (cache perdu à chaque démarrage à froid)
+const DATA_DIR = process.env.RAIL_DATA_DIR ?? (process.env.VERCEL ? '/tmp/railhub-data' : path.resolve(here, '../../data'));
 const CACHE_FILE = path.join(DATA_DIR, 'rfn-lignes.geojson');
 
 type LngLat = [number, number];

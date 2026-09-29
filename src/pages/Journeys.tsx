@@ -271,8 +271,9 @@ export default function JourneysPage() {
           )}
         </div>
 
-        <div className="xl:sticky xl:top-0 xl:self-start">
-          <div className="panel h-[360px] overflow-hidden p-0 xl:h-[calc(100dvh-10rem)]">
+        {/* Mobile : la carte passe au-dessus des résultats pour voir le trajet sélectionné sans défiler */}
+        <div className={clsx('xl:sticky xl:top-0 xl:self-start', journeys.length > 0 ? 'order-first xl:order-none' : 'hidden xl:block')}>
+          <div className="panel h-56 overflow-hidden p-0 sm:h-[360px] xl:h-[calc(100dvh-10rem)]">
             <MapView className="h-full">
               <GeoJsonLayer
                 id="journey"

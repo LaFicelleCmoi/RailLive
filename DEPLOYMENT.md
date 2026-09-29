@@ -15,13 +15,36 @@ Variables à définir sur l’hébergeur (jamais dans le dépôt) : `SNCF_API_KE
 (l’URL publique du site, ex. `https://railhub.example.fr`), `TRUST_PROXY=1` derrière un reverse proxy,
 et éventuellement `DAILY_QUOTA` / `RATE_LIMIT_PER_MINUTE`.
 
+## Vercel (configuration fournie : `vercel.json`)
+
+1. Importez le dépôt GitHub dans Vercel (framework : **Other**, laissez les commandes par défaut : elles viennent de `vercel.json`).
+2. Dans *Settings → Environment Variables*, ajoutez **`SNCF_API_KEY`** (Production + Preview). Optionnel : `DAILY_QUOTA`,
+   `RATE_LIMIT_PER_MINUTE`, `ALLOWED_ORIGIN` (les domaines `*.vercel.app` du déploiement sont autorisés automatiquement).
+3. Déployez.
+
+Fonctionnement :
+
+- le front (`dist/`) est servi en statique par Vercel, avec la CSP et les en-têtes de sécurité définis dans `vercel.json` ;
+- toutes les routes `/api/*` sont réécrites vers la fonction `api/index.js`, qui exécute l’application Express compilée
+  (`server/dist/app.js`) : même liste blanche, validation, cache et rate limiting qu’en local ;
+- les autres routes renvoient `index.html` (application monopage).
+
+Limites propres au serverless :
+
+- le cache, le compteur de quota et le rate limiting sont **par instance** et repartent de zéro à chaque démarrage à froid ;
+- le réseau ferré (~9 Mo) est retéléchargé dans `/tmp` à chaque démarrage à froid (~2 s) ; en attendant, les trains
+  suivent des lignes droites ;
+- `maxDuration` est fixé à 30 s (le plan Hobby l’accepte) et la mémoire à 1 024 Mo pour le graphe.
+
+Pour un cache et un quota fiables, préférez un service Node persistant (Render, Railway, Fly.io, VPS) ci-dessous.
+
 ## Hébergeurs
 
 - **Render / Railway / Fly.io** : service web Node, commande de build `npm ci && npm run build`,
   commande de démarrage `npm start`, variables d’environnement dans le tableau de bord. `TRUST_PROXY=1`.
 - **VPS + Nginx** : `node server/dist/index.js` sous systemd ou pm2, Nginx en reverse proxy HTTPS vers `localhost:3001`,
   `TRUST_PROXY=1`. Laissez Nginx gérer TLS ; la CSP et les en-têtes de sécurité sont posés par l’application.
-- **Vercel / Netlify** (front statique) : possible uniquement si le proxy est déployé séparément ;
+- **Netlify** (front statique) : possible si le proxy est déployé séparément ;
   configurez alors une réécriture de `/api/*` vers le proxy et ajoutez l’URL du site dans `ALLOWED_ORIGIN`.
 
 ## Points d’attention

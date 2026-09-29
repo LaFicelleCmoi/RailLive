@@ -97,6 +97,8 @@ export function MapView({
     instance.on('load', () => {
       // Si la carte a été créée dans un conteneur encore invisible (onglet masqué, transition), on recalcule sa taille
       instance.resize();
+      // Mention des sources repliée par défaut (icône « i ») : elle masquerait le bas de la carte sur mobile
+      instance.getContainer().querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       setMap(instance);
       readyRef.current?.(instance);
     });

@@ -2,9 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useMatches, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import clsx from 'clsx';
-import { Menu, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { NAV } from './nav';
 import { QuotaIndicator } from './QuotaIndicator';
+import { MobileTabBar } from './MobileTabBar';
 import { LiveDot } from '../ui/Badge';
 
 export interface RouteHandle {
@@ -115,7 +116,8 @@ export function AppShell({ topbar, banner }: { topbar?: ReactNode; banner?: Reac
               onClick={() => setDrawer(false)}
             />
             <motion.aside
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-white/[0.08] bg-night-850 lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-[min(20rem,86vw)] flex-col border-r border-white/[0.08] bg-night-850 lg:hidden"
+              style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
               initial={{ x: -300 }}
               animate={{ x: 0 }}
               exit={{ x: -300 }}
@@ -141,14 +143,18 @@ export function AppShell({ topbar, banner }: { topbar?: ReactNode; banner?: Reac
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="relative z-30 flex h-16 shrink-0 items-center gap-3 border-b border-white/[0.06] bg-night-900/70 px-3 backdrop-blur-xl md:px-5">
-          <button
-            className="grid size-9 place-items-center rounded-lg text-ink-300 hover:bg-white/5 lg:hidden"
-            onClick={() => setDrawer(true)}
-            aria-label="Ouvrir le menu"
-          >
-            <Menu className="size-5" />
-          </button>
+        <header
+          className="relative z-30 flex shrink-0 items-center gap-2.5 border-b border-white/[0.06] bg-night-900/70 px-3 backdrop-blur-xl sm:gap-3 md:px-5"
+          style={{ paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(3.5rem + env(safe-area-inset-top))' }}
+        >
+          {/* Mobile / tablette : logo compact ; le menu complet s'ouvre via « Plus » dans la barre du bas */}
+          <NavLink to="/" className="shrink-0 lg:hidden" aria-label="Accueil RailHub">
+            <svg viewBox="0 0 32 32" className="size-8" aria-hidden>
+              <rect width="32" height="32" rx="8" fill="#0e1524" stroke="rgb(255 255 255 / 0.08)" />
+              <path d="M9 20.5c3-9 11-9 14 0" fill="none" stroke="#4fd3ea" strokeWidth="2.4" strokeLinecap="round" />
+              <circle cx="23" cy="20.5" r="2.6" fill="#e9edf3" />
+            </svg>
+          </NavLink>
           <div className="min-w-0 flex-1">{topbar}</div>
           <div className="hidden sm:block lg:hidden">
             <QuotaIndicator compact />
@@ -166,12 +172,13 @@ export function AppShell({ topbar, banner }: { topbar?: ReactNode; banner?: Reac
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className={clsx(fullBleed ? 'h-full' : 'mx-auto w-full max-w-[1400px] px-4 py-6 md:px-8 md:py-8')}
+              className={clsx(fullBleed ? 'h-full' : 'mx-auto w-full max-w-[1400px] px-3.5 py-5 sm:px-5 md:px-8 md:py-8')}
             >
               {outlet}
             </motion.div>
           </AnimatePresence>
         </main>
+        <MobileTabBar onMenu={() => setDrawer(true)} />
       </div>
     </div>
   );

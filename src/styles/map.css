@@ -1,3 +1,13 @@
+/* Mobile / tablette : zoom au pincement, les boutons +/− encombreraient l'écran */
+@media (max-width: 1023px) {
+  .maplibregl-ctrl-group {
+    display: none !important;
+  }
+  .maplibregl-ctrl-attrib.maplibregl-compact {
+    margin: 0 6px 6px 0 !important;
+  }
+}
+
 /* Habillage MapLibre cohérent avec le thème */
 .maplibregl-ctrl-group {
   background: rgb(14 21 36 / 0.85) !important;

@@ -52,6 +52,9 @@ npm run build        # build front + serveur + vérification des secrets
 npm start            # production : le proxy sert aussi dist/ sur http://localhost:3001
 ```
 
+Déploiement sur **Vercel** : `vercel.json` est fourni (front statique + API en fonction serverless) ; il suffit
+d’importer le dépôt et de définir `SNCF_API_KEY`. Détails et alternatives dans [`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 `npm run build` se termine par `npm run check:secrets`, qui échoue si la clé API (en clair ou en base64),
 une URL directe de l’API SNCF ou une source map se retrouve dans `dist/`.
 
@@ -88,6 +91,16 @@ railhub/
 | 6 | Perturbations | `/disruptions`, `/traffic`, `/equipment`, bandeau global | `disruptions`, `traffic_reports`, `line_reports`, `equipment_reports` |
 | 7 | Référentiel | `/catalog/:type`, `/lines/:id`, `/networks/:id` | `networks`, `lines`, `routes`, `stop_areas`, `stop_points`, modes, `companies` |
 | 8 | Méta | `/status` | `coverage`, `status`, `datasets`, `contributors`, `/api/meta/quota` |
+
+## Responsive
+
+- **Mobile / tablette (< 1024 px)** : barre d’onglets en bas (Accueil, Carte, Départs, Trajet, Plus → menu complet),
+  en-tête compact, prise en compte des encoches (`safe-area-inset`).
+- **Pages carte** : panneau en *bottom sheet* à trois crans (réduit, mi-hauteur, plein) dont tout le contenu défile ;
+  recadrage de la carte qui tient compte du panneau ; zoom au pincement (boutons masqués) ; sources repliées.
+- **Panneau des départs** : heure à gauche, train et destination empilés à droite ; filtres et grandes gares en ligne défilante.
+- **Tableaux** (grille horaire, équipements) : défilement horizontal avec colonne des gares figée.
+- Champs de saisie en 16 px sur mobile (pas de zoom automatique iOS), cibles tactiles élargies.
 
 ## Sécurité
 

@@ -130,7 +130,7 @@ export function PlaceAutocomplete({
             aria-autocomplete="list"
             autoComplete="off"
             autoFocus={autoFocus}
-            className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink-100 outline-none placeholder:text-ink-500"
+            className="h-full min-w-0 flex-1 bg-transparent text-base text-ink-100 outline-none placeholder:text-ink-500 sm:text-sm"
             placeholder={placeholder}
             value={text}
             onChange={(e) => {

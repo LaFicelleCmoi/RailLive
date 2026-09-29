@@ -141,11 +141,31 @@
     font-family: var(--font-led);
     letter-spacing: 0.04em;
   }
+  /* 16 px sur mobile : évite le zoom automatique d'iOS au focus */
   .input {
-    @apply h-10 w-full rounded-lg border border-white/[0.08] bg-night-900/80 px-3 text-sm text-ink-100 placeholder:text-ink-500 transition-colors outline-none hover:border-white/15 focus:border-info-500/60 focus:ring-2 focus:ring-info-500/20;
+    @apply h-10 w-full rounded-lg border border-white/[0.08] bg-night-900/80 px-3 text-base text-ink-100 placeholder:text-ink-500 transition-colors outline-none hover:border-white/15 focus:border-info-500/60 focus:ring-2 focus:ring-info-500/20 sm:text-sm;
+  }
+  /* Défilement horizontal discret (barres de filtres, onglets) */
+  .scroll-x {
+    @apply flex flex-nowrap overflow-x-auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-x::-webkit-scrollbar {
+    display: none;
   }
   .label {
     @apply mb-1.5 block text-xs font-medium text-ink-400;
+  }
+}
+
+/* Cibles tactiles confortables sur écran tactile */
+@media (pointer: coarse) {
+  button,
+  a,
+  [role='radio'],
+  [role='option'] {
+    touch-action: manipulation;
   }
 }
 

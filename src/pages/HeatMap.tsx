@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Flame } from 'lucide-react';
 import { MAP_FONT, MapView } from '@/components/map/MapView';
 import { EMPTY_FC, FitBounds, GeoJsonLayer, pointsFC } from '@/components/map/layers';
-import { SidePanel } from '@/components/ui/SidePanel';
+import { SidePanel, useMapPadding } from '@/components/ui/SidePanel';
 import { EmptyState, ErrorState, SkeletonRows } from '@/components/ui/States';
 import { Segmented } from '@/components/ui/Segmented';
 import { Stat } from '@/components/ui/Card';
@@ -26,6 +26,7 @@ export default function HeatMapPage() {
   const q = useReachable(from, max, datetime);
   const sa = useStopArea(from);
   const origin = toLngLat(sa.data?.coord);
+  const mapPadding = useMapPadding();
   const points = q.data?.points ?? [];
 
   const fc = useMemo(
@@ -104,7 +105,7 @@ export default function HeatMapPage() {
           data={origin ? pointsFC([{ id: 'o', lngLat: origin }]) : EMPTY_FC}
           layers={[{ id: 'heat-origin-dot', type: 'circle', paint: { 'circle-radius': 7, 'circle-color': '#e9edf3', 'circle-stroke-color': '#05080f', 'circle-stroke-width': 2 } }]}
         />
-        <FitBounds points={points.length ? points.map((p) => [p.lon, p.lat]) : origin ? [origin] : []} padding={{ top: 60, bottom: 60, left: 440, right: 60 }} maxZoom={9} />
+        <FitBounds points={points.length ? points.map((p) => [p.lon, p.lat]) : origin ? [origin] : []} padding={mapPadding} maxZoom={9} />
       </MapView>
 
       <SidePanel

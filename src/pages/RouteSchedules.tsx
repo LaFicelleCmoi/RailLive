@@ -115,11 +115,11 @@ export default function RouteSchedulesPage() {
               {rows.length} arrêts × {headers.length} circulations
             </span>
           </div>
-          <div className={clsx('max-h-[70vh] overflow-auto', grid.isFetching && 'opacity-60 transition-opacity')}>
+          <div className={clsx('max-h-[65dvh] overflow-auto overscroll-contain sm:max-h-[70vh]', grid.isFetching && 'opacity-60 transition-opacity')}>
             <table className="border-separate border-spacing-0 text-sm">
               <thead>
                 <tr>
-                  <th className="sticky top-0 left-0 z-30 min-w-56 border-r border-b border-white/[0.06] bg-night-800 px-4 py-2.5 text-left">
+                  <th className="sticky top-0 left-0 z-30 min-w-32 border-r border-b border-white/[0.06] bg-night-800 px-3 py-2.5 text-left sm:min-w-56 sm:px-4">
                     <span className="eyebrow text-[10px]">Gare</span>
                   </th>
                   {headers.map((h, i) => {
@@ -142,7 +142,7 @@ export default function RouteSchedulesPage() {
               <tbody>
                 {rows.map((r, ri) => (
                   <tr key={`${r.stop_point.id}-${ri}`} className="group">
-                    <th className="sticky left-0 z-10 max-w-64 truncate border-r border-b border-white/[0.04] bg-night-800 px-4 py-1.5 text-left font-normal text-ink-200 group-hover:bg-night-700">
+                    <th className="sticky left-0 z-10 max-w-36 truncate border-r border-b border-white/[0.04] bg-night-800 px-3 py-1.5 text-left text-xs font-normal text-ink-200 group-hover:bg-night-700 sm:max-w-64 sm:px-4 sm:text-sm">
                       <Link to={`/stop-areas/${encodeURIComponent(r.stop_point.stop_area?.id ?? '')}`} className="hover:text-info-300">
                         {r.stop_point.name}
                       </Link>
