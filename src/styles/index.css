@@ -1,0 +1,159 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/600.css';
+@import '@fontsource/doto/700.css';
+@import '@fontsource/doto/900.css';
+@import 'maplibre-gl/dist/maplibre-gl.css';
+@import './map.css';
+
+/* ------------------------------------------------------------------ */
+/*  Design tokens                                                      */
+/* ------------------------------------------------------------------ */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-led: 'Doto', 'JetBrains Mono', monospace;
+
+  /* Surfaces : bleu nuit → graphite */
+  --color-night-950: #05080f;
+  --color-night-900: #070b14;
+  --color-night-850: #0a101c;
+  --color-night-800: #0e1524;
+  --color-night-700: #141d30;
+  --color-night-600: #1b263d;
+  --color-graphite-500: #2a3549;
+  --color-graphite-400: #3b4760;
+
+  /* Texte */
+  --color-ink-50: #f4f6fa;
+  --color-ink-100: #e9edf3;
+  --color-ink-300: #b8c2d3;
+  --color-ink-400: #8d99ae;
+  --color-ink-500: #667389;
+  --color-ink-600: #4a566b;
+
+  /* Accents fonctionnels */
+  --color-info-300: #8be3f2;
+  --color-info-400: #4fd3ea;
+  --color-info-500: #22bcd8;
+  --color-info-600: #1695ad;
+  --color-wait-300: #fcd98a;
+  --color-wait-400: #f7c257;
+  --color-wait-500: #eaa531;
+  --color-alert-300: #ff9f9b;
+  --color-alert-400: #f8716c;
+  --color-alert-500: #e5484d;
+  --color-ok-400: #4cd6a0;
+  --color-ok-500: #2bb584;
+
+  /* Modes ferroviaires */
+  --color-mode-tgv: #b18cff;
+  --color-mode-ouigo: #ff6fb5;
+  --color-mode-intercites: #66a6ff;
+  --color-mode-ter: #4fd3ea;
+  --color-mode-transilien: #7ee0a8;
+  --color-mode-other: #b8c2d3;
+
+  --radius-panel: 14px;
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px -12px rgb(0 0 0 / 0.55);
+  --shadow-pop: 0 1px 0 0 rgb(255 255 255 / 0.06) inset, 0 24px 60px -18px rgb(0 0 0 / 0.7);
+
+  --animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Base                                                               */
+/* ------------------------------------------------------------------ */
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-night-900 text-ink-100 font-sans;
+    min-height: 100dvh;
+    font-feature-settings: 'cv11', 'ss01';
+    background-image:
+      radial-gradient(1200px 600px at 12% -10%, rgb(34 188 216 / 0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgb(102 166 255 / 0.05), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: rgb(79 211 234 / 0.3);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-info-400);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-graphite-500) transparent;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Panneau légèrement translucide */
+  .panel {
+    @apply rounded-[var(--radius-panel)] border border-white/[0.07] bg-night-800/70 backdrop-blur-xl;
+    box-shadow: var(--shadow-panel);
+  }
+  .panel-solid {
+    @apply rounded-[var(--radius-panel)] border border-white/[0.07] bg-night-800;
+    box-shadow: var(--shadow-panel);
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-500;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, rgb(255 255 255 / 0.03) 0%, rgb(255 255 255 / 0.08) 50%, rgb(255 255 255 / 0.03) 100%);
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-md;
+  }
+  .led {
+    font-family: var(--font-led);
+    letter-spacing: 0.04em;
+  }
+  .input {
+    @apply h-10 w-full rounded-lg border border-white/[0.08] bg-night-900/80 px-3 text-sm text-ink-100 placeholder:text-ink-500 transition-colors outline-none hover:border-white/15 focus:border-info-500/60 focus:ring-2 focus:ring-info-500/20;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-medium text-ink-400;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

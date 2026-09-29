@@ -1,0 +1,49 @@
+/* Habillage MapLibre cohérent avec le thème */
+.maplibregl-ctrl-group {
+  background: rgb(14 21 36 / 0.85) !important;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px -8px rgb(0 0 0 / 0.6) !important;
+  backdrop-filter: blur(12px);
+}
+.maplibregl-ctrl-group button {
+  width: 32px !important;
+  height: 32px !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid rgb(255 255 255 / 0.06) !important;
+}
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(0.85);
+}
+.maplibregl-ctrl-attrib {
+  background: rgb(7 11 20 / 0.7) !important;
+  color: #667389 !important;
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib a {
+  color: #8d99ae !important;
+}
+.maplibregl-popup-content {
+  background: rgb(14 21 36 / 0.94) !important;
+  color: #e9edf3;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  box-shadow: 0 20px 50px -16px rgb(0 0 0 / 0.8) !important;
+  backdrop-filter: blur(14px);
+  font-family: var(--font-sans);
+}
+.maplibregl-popup-tip {
+  border-top-color: rgb(14 21 36 / 0.94) !important;
+  border-bottom-color: rgb(14 21 36 / 0.94) !important;
+}
+.maplibregl-popup-close-button {
+  color: #8d99ae;
+  font-size: 18px;
+  padding: 2px 8px;
+}
+.maplibregl-popup-close-button:hover {
+  background: transparent !important;
+  color: #e9edf3;
+}

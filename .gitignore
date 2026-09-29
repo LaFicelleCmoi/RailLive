@@ -1,0 +1,19 @@
+node_modules/
+dist/
+server/dist/
+*.log
+.DS_Store
+coverage/
+
+# Secrets
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Éditeurs
+.vscode/*
+!.vscode/extensions.json
+.idea/
