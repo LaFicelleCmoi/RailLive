@@ -29,6 +29,10 @@ const routes: RouteObject[] = [
       { path: 'train/:id', lazy: page(() => import('./pages/Train')) },
       { path: 'trips', lazy: page(() => import('./pages/Trips')) },
       { path: 'live', handle: FULL, lazy: page(() => import('./pages/LiveMap')) },
+      // Module 6 · Perturbations
+      { path: 'disruptions', lazy: page(() => import('./pages/Disruptions')) },
+      { path: 'traffic', lazy: page(() => import('./pages/Traffic')) },
+      { path: 'equipment', lazy: page(() => import('./pages/Equipment')) },
       // Module 3 · Horaires
       { path: 'board', lazy: page(() => import('./pages/Board')) },
       { path: 'schedules', lazy: page(() => import('./pages/Schedules')) },
