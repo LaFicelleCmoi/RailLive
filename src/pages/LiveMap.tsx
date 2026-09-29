@@ -15,7 +15,7 @@ import { ErrorState } from '@/components/ui/States';
 import { Timeline, type TimelineItem } from '@/components/Timeline/Timeline';
 import { useLiveTrains, type LiveTrain } from '@/api/hooks/trains';
 import { LIVE_MODES, MODE_META, type TrainMode } from '@/utils/modes';
-import { FRANCE_CENTER, haversine } from '@/utils/geo';
+import { FRANCE_BOUNDS, FRANCE_CENTER, haversine } from '@/utils/geo';
 import { useNow } from '@/utils/hooks';
 
 interface View {
@@ -134,7 +134,7 @@ export default function LiveMapPage() {
 
   return (
     <div className="relative h-full">
-      <MapView className="absolute inset-0" center={FRANCE_CENTER} zoom={5.4} controlsPosition="bottom-left">
+      <MapView className="absolute inset-0" center={FRANCE_CENTER} bounds={FRANCE_BOUNDS} controlsPosition="bottom-left">
         <ViewTracker onChange={setView} />
         <GeoJsonLayer
           id="live-network"

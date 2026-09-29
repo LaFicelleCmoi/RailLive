@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import maplibregl, { type Map as MlMap, type MapMouseEvent } from 'maplibre-gl';
+import type { Map as MlMap, MapMouseEvent } from 'maplibre-gl';
+import maplibregl from './maplibre';
 import clsx from 'clsx';
 import { FRANCE_CENTER, type LngLat } from '@/utils/geo';
 
@@ -75,13 +76,15 @@ export function MapView({
     if (!bare && interactive) instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), controlsPosition);
     instance.touchZoomRotate.disableRotation();
     instance.on('load', () => {
+      // Si la carte a été créée dans un conteneur encore invisible (onglet masqué, transition), on recalcule sa taille
+      instance.resize();
       setMap(instance);
       readyRef.current?.(instance);
     });
     instance.on('click', (e) => clickRef.current?.([e.lngLat.lng, e.lngLat.lat], e));
     instance.on('error', (e) => {
-      // Les erreurs de tuiles ne doivent pas casser la page
-      if (import.meta.env.DEV) console.warn('[map]', e.error?.message);
+      // Les erreurs de tuiles ne doivent pas casser la page : on les signale sans interrompre le rendu
+      console.warn('[carte]', e.error?.message ?? e);
     });
     const ro = new ResizeObserver(() => instance.resize());
     ro.observe(container.current);

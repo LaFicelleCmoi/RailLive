@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import maplibregl, { type GeoJSONSource, type LayerSpecification, type MapLayerMouseEvent } from 'maplibre-gl';
+import type { GeoJSONSource, LayerSpecification, MapGeoJSONFeature, MapLayerMouseEvent } from 'maplibre-gl';
+import maplibregl from './maplibre';
 import type { FeatureCollection } from 'geojson';
 import { useMap } from './MapView';
 import type { LngLat } from '@/utils/geo';
@@ -27,7 +28,7 @@ export function GeoJsonLayer({
   data: FeatureCollection;
   layers: LayerDef[];
   beforeId?: string;
-  onClick?: (feature: maplibregl.MapGeoJSONFeature, e: MapLayerMouseEvent) => void;
+  onClick?: (feature: MapGeoJSONFeature, e: MapLayerMouseEvent) => void;
   cursor?: boolean;
 }) {
   const map = useMap();
