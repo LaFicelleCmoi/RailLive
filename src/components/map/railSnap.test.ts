@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+import { RailSnapper, snapRadius } from './railSnap';
+
+// Voie est-ouest à la latitude 43.2900 (Aubagne), et une voie nord-sud qui la croise à 5.5500
+const EW = [
+  [5.5, 43.29],
+  [5.6, 43.29],
+];
+const NS = [
+  [5.55, 43.25],
+  [5.55, 43.33],
+];
+
+describe('RailSnapper', () => {
+  it('colle un train décalé de ~300 m sur la voie la plus proche', () => {
+    const s = new RailSnapper();
+    s.setLines([EW]);
+    const p = s.snap(5.52, 43.2927, 90, 500)!; // ~300 m au nord de la voie, cap est
+    expect(p[1]).toBeCloseTo(43.29, 5);
+    expect(p[0]).toBeCloseTo(5.52, 5);
+  });
+
+  it('ne colle pas au-delà du rayon', () => {
+    const s = new RailSnapper();
+    s.setLines([EW]);
+    expect(s.snap(5.52, 43.3, 90, 500)).toBeNull(); // ~1,1 km
+  });
+
+  it('préfère la voie orientée comme le train à un croisement', () => {
+    const s = new RailSnapper();
+    s.setLines([EW, NS]);
+    // Train roulant vers l'est, à 120 m au nord de la voie EW et à 80 m à l'ouest de la voie NS
+    const p = s.snap(5.549, 43.2911, 90, 500)!;
+    expect(p[1]).toBeCloseTo(43.29, 4); // reste sur la voie est-ouest
+  });
+
+  it('est inactif sans voies', () => {
+    const s = new RailSnapper();
+    s.setLines([]);
+    expect(s.active).toBe(false);
+    expect(s.snap(5.5, 43.29, 0, 500)).toBeNull();
+  });
+
+  it('adapte le rayon au zoom', () => {
+    expect(snapRadius(9, 45)).toBe(500);
+    expect(snapRadius(18, 45)).toBe(60); // plancher
+    const r14 = snapRadius(14, 45); // ~270 m
+    expect(r14).toBeGreaterThan(60);
+    expect(r14).toBeLessThan(500);
+  });
+});

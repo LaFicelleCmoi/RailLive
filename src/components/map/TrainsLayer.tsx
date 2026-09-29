@@ -5,6 +5,7 @@ import { isMapAlive, safeCleanup, useMap, MAP_FONT_BOLD } from './MapView';
 import type { LiveTrain } from '@/api/hooks/trains';
 import { interpolatePosition, preparePath, type PreparedPath, type TimedStop } from '@/utils/interpolate';
 import { decodePolyline } from '@/utils/polyline';
+import { RailSnapper, SNAP_MIN_ZOOM, snapRadius } from './railSnap';
 import { MODE_META } from '@/utils/modes';
 
 const SOURCE = 'live-trains';
@@ -141,25 +142,46 @@ export function TrainsLayer({
     map.on('mouseenter', 'lt-glow', enter);
     map.on('mouseleave', 'lt-glow', leave);
 
+    // Voies OSM du fond de carte : relues quand des tuiles arrivent ou que la vue change
+    const snapper = new RailSnapper();
+    let rebuildTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRebuild = () => {
+      clearTimeout(rebuildTimer);
+      rebuildTimer = setTimeout(() => isMapAlive(map) && snapper.rebuild(map), 250);
+    };
+    const onSourceData = (e: { sourceId?: string; isSourceLoaded?: boolean }) => {
+      if (e.sourceId === 'carto' && e.isSourceLoaded) scheduleRebuild();
+    };
+    map.on('sourcedata', onSourceData);
+    map.on('moveend', scheduleRebuild);
+    scheduleRebuild();
+
     let raf = 0;
     let last = 0;
     const tick = (ts: number) => {
       raf = requestAnimationFrame(tick);
       if (ts - last < FRAME_MS) return;
       last = ts;
+      if (!isMapAlive(map)) return;
       const now = Date.now() / 1000;
       const sel = selectedRef.current;
+      const zoom = map.getZoom();
+      const snapping = snapper.active && zoom >= SNAP_MIN_ZOOM;
+      const radius = snapping ? snapRadius(zoom, map.getCenter().lat) : 0;
       const features: Feature<Point>[] = [];
       for (const p of prepared.current) {
         const pos = interpolatePosition(p.stops, now);
         if (!pos || pos.state === 'arrived') continue;
+        // Colle le train à la voie dessinée par la carte. Sur un tronçon sans tracé ferroviaire (ligne droite
+        // de secours, ex. RER sur infrastructure RATP), la position est approximative : rayon élargi.
+        const approximate = pos.state === 'running' && !p.stops[pos.index]?.path;
+        const snapped = snapping ? snapper.snap(pos.lon, pos.lat, pos.bearing, approximate ? Math.min(1500, radius * 3) : radius) : null;
         features.push({
           type: 'Feature',
-          geometry: { type: 'Point', coordinates: [pos.lon, pos.lat] },
+          geometry: { type: 'Point', coordinates: snapped ?? [pos.lon, pos.lat] },
           properties: { id: p.t.id, c: p.color, dl: p.t.dl, n: p.t.n, sel: p.t.id === sel ? 1 : 0, st: pos.state },
         });
       }
-      if (!isMapAlive(map)) return;
       (map.getSource(SOURCE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
       frameRef.current?.(features.length);
     };
@@ -167,7 +189,10 @@ export function TrainsLayer({
 
     return () => {
       cancelAnimationFrame(raf);
+      clearTimeout(rebuildTimer);
       safeCleanup(map, (m) => {
+        m.off('sourcedata', onSourceData);
+        m.off('moveend', scheduleRebuild);
         m.off('click', 'lt-core', click);
         m.off('click', 'lt-glow', click);
         m.off('click', mapClick);

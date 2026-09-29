@@ -122,6 +122,18 @@ L’API SNCF ne fournit pas la géométrie des voies. Au démarrage, le serveur 
 Pour chaque paire de gares successives, il calcule le plus court chemin sur les rails (A*), le simplifie et le met en cache.
 Les trains de la carte live, la fiche train, la fiche ligne et les itinéraires suivent ainsi les vraies voies.
 
+Robustesse du graphe : nœuds densifiés tous les 150 m, extrémités de tronçons raccordées jusqu’à 600 m (voies en gare
+absentes du fichier, ex. Sète), plusieurs points d’entrée candidats par gare, et garde-fous proportionnels à la distance
+(pas de faux détour : un trajet non couvert, comme les tronçons RATP des RER A et B, reste en ligne droite plutôt que
+d’emprunter une autre ligne).
+
+**Aimantation sur la carte** : le fond CARTO est issu d’OpenStreetMap, dont le tracé des voies diffère légèrement de celui
+de SNCF Réseau. À partir du zoom 9,5, chaque train est projeté, à chaque image, sur la voie OSM la plus proche présente dans
+les tuiles de la carte, en privilégiant celle orientée dans son sens de marche. Les trains collent ainsi aux rails dessinés,
+y compris sur les lignes absentes du RFN. Les voies OSM sont affichées dès le zoom 9 (le style CARTO ne les dessine qu’à 13).
+
+Liens profonds : `/live?lat=43.29&lon=5.55&z=14` ouvre la carte live sur une zone précise.
+
 - `GET /api/geo/rail?pts=lon,lat;lon,lat;…` : tracés encodés (polyline) entre points successifs.
 - `GET /api/geo/rail/status` : état du graphe (nœuds, tronçons, date de chargement).
 

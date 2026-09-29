@@ -80,6 +80,35 @@ export function GeoJsonLayer({
   return null;
 }
 
+/**
+ * Voies ferrées OSM du fond de carte, rendues dès le zoom 9 (le style CARTO ne les dessine qu'à partir de 13).
+ * Ce sont ces voies sur lesquelles les trains sont aimantés.
+ */
+export function BasemapRailLayer({ minzoom = 9 }: { minzoom?: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !map.getSource('carto')) return;
+    const id = 'basemap-rail';
+    map.addLayer({
+      id,
+      type: 'line',
+      source: 'carto',
+      'source-layer': 'transportation',
+      minzoom,
+      maxzoom: 13,
+      filter: ['all', ['==', ['get', 'class'], 'rail'], ['!', ['in', ['get', 'service'], ['literal', ['yard', 'siding', 'spur', 'crossover']]]]],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': '#5a6780',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.7, 13, 1.6],
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 11, 0.85],
+      },
+    } as LayerSpecification);
+    return () => safeCleanup(map, (m) => m.getLayer(id) && m.removeLayer(id));
+  }, [map, minzoom]);
+  return null;
+}
+
 /** Ajuste la vue sur un ensemble de points dès qu'il change. */
 export function FitBounds({
   points,

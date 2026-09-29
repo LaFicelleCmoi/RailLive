@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import type { FeatureCollection } from 'geojson';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Info, Loader2, X, ZoomIn } from 'lucide-react';
 import { MapView, useMap } from '@/components/map/MapView';
-import { GeoJsonLayer } from '@/components/map/layers';
+import { BasemapRailLayer, GeoJsonLayer } from '@/components/map/layers';
 import { TrainsLayer } from '@/components/map/TrainsLayer';
 import { SidePanel } from '@/components/ui/SidePanel';
 import { FilterChip } from '@/components/ui/Segmented';
@@ -102,6 +102,16 @@ function TrainPanel({ t, onClose }: { t: LiveTrain; onClose: () => void }) {
 }
 
 export default function LiveMapPage() {
+  // Lien profond : /live?lat=43.29&lon=5.57&z=13 ouvre la carte sur une zone précise
+  const [params] = useSearchParams();
+  const [initial] = useState(() => {
+    const lat = Number(params.get('lat'));
+    const lon = Number(params.get('lon'));
+    const z = Number(params.get('z'));
+    return params.get('lat') && Number.isFinite(lat) && Number.isFinite(lon)
+      ? { center: [lon, lat] as LngLat, zoom: Number.isFinite(z) && z > 0 ? Math.min(16, z) : 12 }
+      : null;
+  });
   const [view, setView] = useState<View | null>(null);
   const live = useLiveTrains(view);
   const [modes, setModes] = useState<Set<TrainMode>>(new Set(LIVE_MODES));
@@ -155,8 +165,15 @@ export default function LiveMapPage() {
 
   return (
     <div className="relative h-full">
-      <MapView className="absolute inset-0" center={FRANCE_CENTER} bounds={FRANCE_BOUNDS} controlsPosition="bottom-left">
+      <MapView
+        className="absolute inset-0"
+        center={initial?.center ?? FRANCE_CENTER}
+        zoom={initial?.zoom}
+        bounds={initial ? undefined : FRANCE_BOUNDS}
+        controlsPosition="bottom-left"
+      >
         <ViewTracker onChange={setView} />
+        <BasemapRailLayer />
         <GeoJsonLayer
           id="live-network"
           data={networkFC}
@@ -168,8 +185,19 @@ export default function LiveMapPage() {
               paint: {
                 'line-color': ['get', 'c'],
                 'line-width': ['case', ['==', ['get', 'sel'], 1], 3, ['interpolate', ['linear'], ['zoom'], 4, 0.6, 10, 1.4]],
-                // Les voies deviennent plus lisibles en zoomant : on voit les trains les suivre
-                'line-opacity': ['case', ['==', ['get', 'sel'], 1], 0.95, ['interpolate', ['linear'], ['zoom'], 5, 0.16, 9, 0.35, 12, 0.5]],
+                // Vue d'ensemble : tracé SNCF Réseau. Au zoom, il s'efface au profit des voies de la carte
+                // (sur lesquelles les trains sont aimantés) pour ne pas afficher deux tracés décalés.
+                'line-opacity': [
+                  'interpolate',
+                  ['linear'],
+                  ['zoom'],
+                  5,
+                  ['case', ['==', ['get', 'sel'], 1], 0.95, 0.16],
+                  9,
+                  ['case', ['==', ['get', 'sel'], 1], 0.9, 0.3],
+                  10.5,
+                  ['case', ['==', ['get', 'sel'], 1], 0.35, 0],
+                ],
               },
             },
           ]}

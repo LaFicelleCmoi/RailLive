@@ -94,6 +94,8 @@ export function MapView({
     }
     if (!bare && interactive) instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), controlsPosition);
     instance.touchZoomRotate.disableRotation();
+    // Développement uniquement : accès à la carte depuis la console (retiré du build de production)
+    if (import.meta.env.DEV) (window as unknown as { __railhubMap?: MlMap }).__railhubMap = instance;
     instance.on('load', () => {
       // Si la carte a été créée dans un conteneur encore invisible (onglet masqué, transition), on recalcule sa taille
       instance.resize();

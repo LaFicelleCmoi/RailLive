@@ -18,6 +18,15 @@ const SOURCE_URL =
 /** Tronçons réellement circulés */
 const USABLE = new Set(['Exploitée', 'S9A3 - Ligne en travaux']);
 const REFRESH_MS = 30 * 24 * 3600_000;
+/** Espacement maximal entre deux nœuds du graphe (m) */
+const DENSIFY_M = 150;
+/**
+ * Rayon de raccordement d'une extrémité de tronçon à une autre ligne (m). Le fichier omet souvent
+ * les voies à l'intérieur des gares (ex. Sète : 382 m entre les lignes 640000 et 810000).
+ */
+const JOIN_M = 600;
+/** Rayon de recherche des points d'entrée sur le réseau autour d'une gare (m), la distance étant pénalisée. */
+const STATION_M = 3500;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // Sur Vercel, seul /tmp est inscriptible (cache perdu à chaque démarrage à froid)
@@ -31,6 +40,8 @@ let lon: Float64Array = new Float64Array(0);
 let lat: Float64Array = new Float64Array(0);
 let adj: number[][] = [];
 let adjW: number[][] = [];
+/** Tronçon d'origine de chaque nœud */
+let lineOf: Int32Array = new Int32Array(0);
 /** Index spatial : cellule de 0,02° → nœuds */
 const grid = new Map<string, number[]>();
 const CELL = 0.02;
@@ -55,6 +66,28 @@ function haversine(aLon: number, aLat: number, bLon: number, bLat: number): numb
 }
 
 const cellKey = (x: number, y: number) => `${Math.floor(x / CELL)}:${Math.floor(y / CELL)}`;
+
+/** Les `k` nœuds les plus proches d'un point, au plus un par tronçon, dans un rayon maximal (m). */
+function nearestNodes(x: number, y: number, maxM: number, k: number): { n: number; d: number }[] {
+  const cx = Math.floor(x / CELL);
+  const cy = Math.floor(y / CELL);
+  const ring = Math.ceil(maxM / 1500) + 1;
+  const bestPerLine = new Map<number, { n: number; d: number }>();
+  for (let dx = -ring; dx <= ring; dx++) {
+    for (let dy = -ring; dy <= ring; dy++) {
+      const cell = grid.get(`${cx + dx}:${cy + dy}`);
+      if (!cell) continue;
+      for (const n of cell) {
+        const d = haversine(x, y, lon[n]!, lat[n]!);
+        if (d > maxM) continue;
+        const line = lineOf[n]!;
+        const cur = bestPerLine.get(line);
+        if (!cur || d < cur.d) bestPerLine.set(line, { n, d });
+      }
+    }
+  }
+  return [...bestPerLine.values()].sort((p, q) => p.d - q.d).slice(0, k);
+}
 
 /** Nœud le plus proche d'un point, dans un rayon maximal (m). */
 function nearestNode(x: number, y: number, maxM: number, exclude?: (n: number) => boolean): number {
@@ -126,10 +159,26 @@ function build(features: GeoFeature[]) {
       if (part.length < 2) continue;
       const lineId = lines++;
       let prev = -1;
+      let px = 0;
+      let py = 0;
       for (const [x, y] of part) {
+        if (prev >= 0) {
+          // Densification : sur les longues lignes droites le fichier n'a qu'un sommet tous les
+          // quelques km ; on insère un nœud au moins tous les 150 m pour que gares et jonctions
+          // trouvent toujours un point de voie à proximité.
+          const steps = Math.floor(haversine(px, py, x!, y!) / DENSIFY_M);
+          for (let s = 1; s <= steps; s++) {
+            const f = s / (steps + 1);
+            const m = nodeOf(px + (x! - px) * f, py + (y! - py) * f, lineId);
+            link(prev, m);
+            prev = m;
+          }
+        }
         const n = nodeOf(x!, y!, lineId);
         if (prev >= 0) link(prev, n);
         prev = n;
+        px = x!;
+        py = y!;
       }
       endpoints.push({ node: nodeOf(part[0]![0]!, part[0]![1]!, lineId), line: lineId }, { node: prev, line: lineId });
     }
@@ -139,6 +188,7 @@ function build(features: GeoFeature[]) {
   lat = Float64Array.from(ys);
   adj = a;
   adjW = w;
+  lineOf = Int32Array.from(nodeLine);
   grid.clear();
   for (let i = 0; i < xs.length; i++) {
     const k = cellKey(xs[i]!, ys[i]!);
@@ -151,7 +201,7 @@ function build(features: GeoFeature[]) {
   let joins = 0;
   for (const { node, line } of endpoints) {
     if (adj[node]!.length > 1) continue; // déjà une jonction
-    const m = nearestNode(lon[node]!, lat[node]!, 120, (n) => nodeLine[n] === line);
+    const m = nearestNode(lon[node]!, lat[node]!, JOIN_M, (n) => nodeLine[n] === line);
     if (m >= 0) {
       link(node, m);
       joins++;
@@ -319,6 +369,92 @@ function simplify(pts: LngLat[], tol: number): LngLat[] {
   return pts.filter((_, i) => keep[i]);
 }
 
+/** Taille de la composante connexe d'un nœud (bornée), pour le diagnostic. */
+function componentSize(start: number, cap = 200_000): number {
+  const seen = new Set([start]);
+  const stack = [start];
+  while (stack.length && seen.size < cap) {
+    const u = stack.pop()!;
+    for (const v of adj[u]!) if (!seen.has(v)) (seen.add(v), stack.push(v));
+  }
+  return seen.size;
+}
+
+/** Diagnostic du routage entre deux points (outil de développement). */
+export function debugGraph(a: LngLat, b: LngLat) {
+  const s = nearestNode(a[0], a[1], 1500);
+  const t = nearestNode(b[0], b[1], 1500);
+  const info = (n: number, p: LngLat) =>
+    n < 0 ? null : { node: n, at: [lon[n], lat[n]], distM: Math.round(haversine(p[0], p[1], lon[n]!, lat[n]!)), degree: adj[n]!.length, component: componentSize(n) };
+  let pathM: number | null = null;
+  if (s >= 0 && t >= 0) {
+    const nodes = astar(s, t, Infinity);
+    if (nodes) {
+      pathM = 0;
+      for (let i = 1; i < nodes.length; i++) pathM += haversine(lon[nodes[i - 1]!]!, lat[nodes[i - 1]!]!, lon[nodes[i]!]!, lat[nodes[i]!]!);
+      pathM = Math.round(pathM);
+    }
+  }
+  // Candidats réellement utilisés par railSegment, avec la longueur du chemin pour chaque paire
+  const direct = haversine(a[0], a[1], b[0], b[1]);
+  const entryM = Math.min(STATION_M, Math.max(400, direct * 0.25));
+  const S = nearestNodes(a[0], a[1], entryM, 4);
+  const T = nearestNodes(b[0], b[1], entryM, 4);
+  const pairs = S.flatMap((x) =>
+    T.map((y) => {
+      const p = astar(x.n, y.n, Infinity);
+      let len = 0;
+      if (p) for (let i = 1; i < p.length; i++) len += haversine(lon[p[i - 1]!]!, lat[p[i - 1]!]!, lon[p[i]!]!, lat[p[i]!]!);
+      return { fromD: Math.round(x.d), toD: Math.round(y.d), pathM: p ? Math.round(len) : null };
+    }),
+  );
+  const maxLen = Math.round(direct * 1.8 + Math.min(25_000, Math.max(2_000, direct)));
+  return { state, nodes: railStats.nodes, from: info(s, a), to: info(t, b), directM: Math.round(direct), pathM, entryM: Math.round(entryM), maxLen, pairs };
+}
+
+/** Projection de p sur le segment [u, v] (repère local métrique) : point projeté et distance (m). */
+function projectOnSegment(p: LngLat, u: LngLat, v: LngLat): { pt: LngLat; d: number } {
+  const kx = 111_320 * Math.cos((p[1] * Math.PI) / 180);
+  const ky = 110_540;
+  const ux = (u[0] - p[0]) * kx;
+  const uy = (u[1] - p[1]) * ky;
+  const vx = (v[0] - p[0]) * kx;
+  const vy = (v[1] - p[1]) * ky;
+  const dx = vx - ux;
+  const dy = vy - uy;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 > 0 ? Math.max(0, Math.min(1, -(ux * dx + uy * dy) / len2)) : 0;
+  const px = ux + t * dx;
+  const py = uy + t * dy;
+  return { pt: [p[0] + px / kx, p[1] + py / ky], d: Math.hypot(px, py) };
+}
+
+/**
+ * Raccorde proprement les gares au tracé : chaque gare est projetée sur le segment le plus proche
+ * parmi les 3 premiers (ou derniers) kilomètres, et tout ce qui précède (ou suit) est retiré.
+ * Évite les allers-retours quand le nœud le plus proche de la gare se trouve « derrière » elle.
+ */
+export function trimEnds(coords: LngLat[], a: LngLat, b: LngLat): LngLat[] {
+  if (coords.length < 2) return coords;
+  const WINDOW = 3000;
+  const bestSeg = (pts: LngLat[], p: LngLat) => {
+    let best = { i: 0, pt: pts[0]!, d: Infinity };
+    let acc = 0;
+    for (let i = 0; i < pts.length - 1 && acc <= WINDOW; i++) {
+      const r = projectOnSegment(p, pts[i]!, pts[i + 1]!);
+      if (r.d < best.d) best = { i, pt: r.pt, d: r.d };
+      acc += haversine(pts[i]![0], pts[i]![1], pts[i + 1]![0], pts[i + 1]![1]);
+    }
+    return best;
+  };
+  const s = bestSeg(coords, a);
+  let out: LngLat[] = [s.pt, ...coords.slice(s.i + 1)];
+  const rev = [...out].reverse();
+  const e = bestSeg(rev, b);
+  out = [...rev.slice(e.i + 1).reverse(), e.pt];
+  return out.length >= 2 ? out : coords;
+}
+
 /**
  * Tracé ferroviaire entre deux gares, encodé (polyline précision 5).
  * Renvoie null si le trajet n'est pas couvert par le RFN (le client trace alors une ligne droite).
@@ -332,20 +468,42 @@ export function railSegment(a: LngLat, b: LngLat): string | null {
   const direct = haversine(a[0], a[1], b[0], b[1]);
   let result: string | null = null;
   if (direct > 50) {
-    const s = nearestNode(a[0], a[1], 1500);
-    const t = nearestNode(b[0], b[1], 1500);
-    if (s >= 0 && t >= 0 && s !== t) {
-      // Un détour de plus de 2,2× (ou +25 km) signale un trou dans le graphe : on préfère la ligne droite
-      const maxLen = direct * 2.2 + 25_000;
-      const nodes = astar(s, t, maxLen);
-      if (nodes) {
-        let len = 0;
-        for (let i = 1; i < nodes.length; i++) len += haversine(lon[nodes[i - 1]!]!, lat[nodes[i - 1]!]!, lon[nodes[i]!]!, lat[nodes[i]!]!);
-        if (len <= maxLen) {
-          const pts: LngLat[] = [a, ...nodes.map((n) => [lon[n]!, lat[n]!] as LngLat), b];
-          result = encodePolyline(simplify(pts, 0.00012)); // ~10 m
-        }
+    // Un détour disproportionné signale un trou dans le graphe (ou une ligne absente du RFN, ex. RATP) :
+    // mieux vaut une ligne droite, que le client aimante ensuite sur la vraie voie, qu'un faux tracé.
+    const maxLen = direct * 1.8 + Math.min(25_000, Math.max(2_000, direct));
+    // Point d'entrée sur le réseau : proportionné à la longueur du trajet (un saut RER de 800 m ne doit
+    // pas emprunter une ligne SNCF située à 3 km ; Chessy → CDG, 21 km, peut rejoindre la LGV à 2,9 km).
+    const entryM = Math.min(STATION_M, Math.max(400, direct * 0.25));
+    // Plusieurs nœuds candidats par gare, sur des tronçons différents : le plus proche peut être un
+    // cul-de-sac (voie en impasse, jonction manquante dans les données) qui forcerait un énorme détour.
+    const S = nearestNodes(a[0], a[1], entryM, 4);
+    const T = nearestNodes(b[0], b[1], entryM, 4);
+    let nodes: number[] | null = null;
+    let bestScore = Infinity;
+    const pairs = S.flatMap((s) => T.map((t) => ({ s, t }))).sort((x, y) => x.s.d + x.t.d - (y.s.d + y.t.d));
+    for (const { s, t } of pairs) {
+      if (s.n === t.n || s.d + t.d >= bestScore) continue;
+      const path = astar(s.n, t.n, Math.min(maxLen, bestScore));
+      if (!path) continue;
+      let len = 0;
+      for (let i = 1; i < path.length; i++) len += haversine(lon[path[i - 1]!]!, lat[path[i - 1]!]!, lon[path[i]!]!, lat[path[i]!]!);
+      const score = len + s.d + t.d;
+      if (score < bestScore) {
+        bestScore = score;
+        nodes = path;
       }
+    }
+    if (nodes) {
+      // Supprime l'aller-retour en sortie/entrée de gare : la gare est projetée sur le segment de voie
+      // le plus proche (dans les 3 premiers / derniers km) et le tracé démarre / s'arrête sur ce point.
+      const trimmed = trimEnds(
+        nodes.map((n) => [lon[n]!, lat[n]!] as LngLat),
+        a,
+        b,
+      );
+      let len = 0;
+      for (let i = 1; i < trimmed.length; i++) len += haversine(trimmed[i - 1]![0], trimmed[i - 1]![1], trimmed[i]![0], trimmed[i]![1]);
+      if (len <= maxLen) result = encodePolyline(simplify([a, ...trimmed, b], 0.00012)); // ~10 m
     }
   }
   routeCache.set(key, result ?? '');
