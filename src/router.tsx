@@ -21,6 +21,11 @@ const routes: RouteObject[] = [
       // Module 1 · Recherche
       { path: 'search', handle: FULL, lazy: page(() => import('./pages/Search')) },
       { path: 'stop-areas/:id', lazy: page(() => import('./pages/StopArea')) },
+      // Module 3 · Horaires
+      { path: 'board', lazy: page(() => import('./pages/Board')) },
+      { path: 'schedules', lazy: page(() => import('./pages/Schedules')) },
+      { path: 'route-schedules', lazy: page(() => import('./pages/RouteSchedules')) },
+      { path: 'terminus', lazy: page(() => import('./pages/Terminus')) },
       { path: '*', lazy: page(() => import('./pages/NotFound')) },
     ],
   },
