@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Point } from 'geojson';
-import { useMap, MAP_FONT_BOLD } from './MapView';
+import { isMapAlive, safeCleanup, useMap, MAP_FONT_BOLD } from './MapView';
 import type { LiveTrain } from '@/api/hooks/trains';
 import { interpolatePosition, type TimedStop } from '@/utils/interpolate';
 import { MODE_META } from '@/utils/modes';
@@ -145,6 +145,7 @@ export function TrainsLayer({
           properties: { id: p.t.id, c: p.color, dl: p.t.dl, n: p.t.n, sel: p.t.id === sel ? 1 : 0, st: pos.state },
         });
       }
+      if (!isMapAlive(map)) return;
       (map.getSource(SOURCE) as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features });
       frameRef.current?.(features.length);
     };
@@ -152,13 +153,15 @@ export function TrainsLayer({
 
     return () => {
       cancelAnimationFrame(raf);
-      map.off('click', 'lt-core', click);
-      map.off('click', 'lt-glow', click);
-      map.off('click', mapClick);
-      map.off('mouseenter', 'lt-glow', enter);
-      map.off('mouseleave', 'lt-glow', leave);
-      for (const id of ['lt-label', 'lt-selected', 'lt-core', 'lt-delay', 'lt-glow']) if (map.getLayer(id)) map.removeLayer(id);
-      if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+      safeCleanup(map, (m) => {
+        m.off('click', 'lt-core', click);
+        m.off('click', 'lt-glow', click);
+        m.off('click', mapClick);
+        m.off('mouseenter', 'lt-glow', enter);
+        m.off('mouseleave', 'lt-glow', leave);
+        for (const id of ['lt-label', 'lt-selected', 'lt-core', 'lt-delay', 'lt-glow']) if (m.getLayer(id)) m.removeLayer(id);
+        if (m.getSource(SOURCE)) m.removeSource(SOURCE);
+      });
     };
   }, [map]);
 

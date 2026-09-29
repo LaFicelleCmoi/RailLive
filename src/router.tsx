@@ -17,6 +17,10 @@ const routes: RouteObject[] = [
     element: <RootLayout />,
     errorElement: <RouteError />,
     children: [
+      {
+        // Une erreur dans une page s'affiche à l'intérieur de l'application : le menu reste utilisable.
+        errorElement: <RouteError inline />,
+        children: [
       { index: true, lazy: page(() => import('./pages/Home')) },
       // Module 1 · Recherche
       { path: 'search', handle: FULL, lazy: page(() => import('./pages/Search')) },
@@ -47,6 +51,8 @@ const routes: RouteObject[] = [
       { path: 'route-schedules', lazy: page(() => import('./pages/RouteSchedules')) },
       { path: 'terminus', lazy: page(() => import('./pages/Terminus')) },
       { path: '*', lazy: page(() => import('./pages/NotFound')) },
+        ],
+      },
     ],
   },
 ];

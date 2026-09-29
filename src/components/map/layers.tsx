@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { GeoJSONSource, LayerSpecification, MapGeoJSONFeature, MapLayerMouseEvent } from 'maplibre-gl';
 import maplibregl from './maplibre';
 import type { FeatureCollection } from 'geojson';
-import { useMap } from './MapView';
+import { isMapAlive, safeCleanup, useMap } from './MapView';
 import type { LngLat } from '@/utils/geo';
 
 export const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -58,22 +58,23 @@ export function GeoJsonLayer({
         map.on('mouseleave', lid, leave);
       }
     }
-    return () => {
-      for (const lid of ids) {
-        map.off('click', lid, handleClick);
-        map.off('mouseenter', lid, enter);
-        map.off('mouseleave', lid, leave);
-        if (map.getLayer(lid)) map.removeLayer(lid);
-      }
-      if (map.getSource(id)) map.removeSource(id);
-    };
+    return () =>
+      safeCleanup(map, (m) => {
+        for (const lid of ids) {
+          m.off('click', lid, handleClick);
+          m.off('mouseenter', lid, enter);
+          m.off('mouseleave', lid, leave);
+          if (m.getLayer(lid)) m.removeLayer(lid);
+        }
+        if (m.getSource(id)) m.removeSource(id);
+      });
     // Les définitions de couches sont statiques pour un id donné
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, id]);
 
   useEffect(() => {
-    const src = map?.getSource(id) as GeoJSONSource | undefined;
-    src?.setData(data);
+    if (!isMapAlive(map)) return;
+    (map.getSource(id) as GeoJSONSource | undefined)?.setData(data);
   }, [map, id, data]);
 
   return null;
@@ -114,9 +115,12 @@ export function Popup({ at, children, onClose }: { at: LngLat | null; children: 
   useEffect(() => {
     if (!map || !at) return;
     const popup = new maplibregl.Popup({ closeButton: true, maxWidth: '320px', offset: 12 }).setLngLat(at).setDOMContent(el).addTo(map);
-    popup.on('close', () => closeRef.current?.());
+    const onClose = () => closeRef.current?.();
+    popup.on('close', onClose);
     return () => {
-      popup.remove();
+      // Retrait programmatique : ne pas propager comme une fermeture utilisateur
+      popup.off('close', onClose);
+      if (isMapAlive(map)) popup.remove();
     };
   }, [map, at, el]);
   return at ? createPortal(children, el) : null;

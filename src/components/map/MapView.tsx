@@ -12,6 +12,25 @@ export const MAP_FONT_BOLD = ['Montserrat Medium', 'Open Sans Bold', 'Noto Sans 
 
 const MapCtx = createContext<MlMap | null>(null);
 
+/**
+ * Vrai tant que la carte n'a pas été détruite.
+ * Au démontage, React nettoie <MapView> (map.remove()) AVANT ses enfants : leurs nettoyages
+ * doivent donc vérifier que la carte existe encore avant d'appeler getLayer / removeSource.
+ */
+export function isMapAlive(map: MlMap | null | undefined): map is MlMap {
+  return !!map && !!(map as unknown as { style?: unknown }).style;
+}
+
+/** Nettoyage tolérant : ignoré si la carte a déjà été détruite. */
+export function safeCleanup(map: MlMap, fn: (m: MlMap) => void) {
+  if (!isMapAlive(map)) return;
+  try {
+    fn(map);
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('[carte] nettoyage ignoré', err);
+  }
+}
+
 /** Accès à l'instance MapLibre depuis un enfant de <MapView>. Null tant que la carte n'est pas prête. */
 export function useMap(): MlMap | null {
   return useContext(MapCtx);
