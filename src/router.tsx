@@ -33,6 +33,12 @@ const routes: RouteObject[] = [
       { path: 'disruptions', lazy: page(() => import('./pages/Disruptions')) },
       { path: 'traffic', lazy: page(() => import('./pages/Traffic')) },
       { path: 'equipment', lazy: page(() => import('./pages/Equipment')) },
+      // Module 7 · Référentiel
+      { path: 'catalog', lazy: page(() => import('./pages/Catalog')) },
+      { path: 'catalog/:type', lazy: page(() => import('./pages/Catalog')) },
+      { path: 'catalog/:type/:id', lazy: page(() => import('./pages/ObjectDetail')) },
+      { path: 'lines/:id', lazy: page(() => import('./pages/Line')) },
+      { path: 'networks/:id', lazy: page(() => import('./pages/Network')) },
       // Module 3 · Horaires
       { path: 'board', lazy: page(() => import('./pages/Board')) },
       { path: 'schedules', lazy: page(() => import('./pages/Schedules')) },
