@@ -20,7 +20,21 @@ app.disable('x-powered-by');
 app.set('trust proxy', config.TRUST_PROXY);
 app.set('query parser', 'simple');
 
-const MAP_HOSTS = ['https://basemaps.cartocdn.com', 'https://*.basemaps.cartocdn.com'];
+// Vercel : la réécriture /api/* → api/index.js peut ajouter le segment capturé en paramètre « path ».
+// On le retire avant toute validation (la liste blanche refuse les paramètres inconnus).
+if (config.isServerless) {
+  app.use((req, _res, next) => {
+    const url = new URL(req.url, 'http://local');
+    if (url.searchParams.has('path')) {
+      url.searchParams.delete('path');
+      req.url = `${url.pathname}${url.search}`;
+      req.originalUrl = req.url;
+    }
+    next();
+  });
+}
+
+const MAP_HOSTS =['https://basemaps.cartocdn.com', 'https://*.basemaps.cartocdn.com'];
 
 app.use(
   helmet({
