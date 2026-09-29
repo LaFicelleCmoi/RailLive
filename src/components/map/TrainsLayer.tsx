@@ -5,7 +5,7 @@ import { isMapAlive, safeCleanup, useMap, MAP_FONT_BOLD } from './MapView';
 import type { LiveTrain } from '@/api/hooks/trains';
 import { interpolatePosition, preparePath, type PreparedPath, type TimedStop } from '@/utils/interpolate';
 import { decodePolyline } from '@/utils/polyline';
-import { RailSnapper, SNAP_MIN_ZOOM, snapRadius } from './railSnap';
+import { RailSnapper, SNAP_MIN_ZOOM, SNAP_RADIUS_APPROX_M, SNAP_RADIUS_M } from './railSnap';
 import { MODE_META } from '@/utils/modes';
 
 const SOURCE = 'live-trains';
@@ -142,15 +142,24 @@ export function TrainsLayer({
     map.on('mouseenter', 'lt-glow', enter);
     map.on('mouseleave', 'lt-glow', leave);
 
-    // Voies OSM du fond de carte : relues quand des tuiles arrivent ou que la vue change
+    // Voies OSM du fond de carte : relues au fil de l'arrivée des tuiles, y compris pendant un zoom
+    // (limité à une lecture toutes les 200 ms), puis à la fin de chaque déplacement.
     const snapper = new RailSnapper();
+    /** Dernière position aimantée de chaque train (continuité d'une image à l'autre) */
+    const lastSnap = new Map<string, [number, number]>();
     let rebuildTimer: ReturnType<typeof setTimeout> | undefined;
-    const scheduleRebuild = () => {
-      clearTimeout(rebuildTimer);
-      rebuildTimer = setTimeout(() => isMapAlive(map) && snapper.rebuild(map), 250);
+    let lastRebuild = 0;
+    const rebuild = () => {
+      rebuildTimer = undefined;
+      lastRebuild = performance.now();
+      if (isMapAlive(map)) snapper.rebuild(map);
     };
-    const onSourceData = (e: { sourceId?: string; isSourceLoaded?: boolean }) => {
-      if (e.sourceId === 'carto' && e.isSourceLoaded) scheduleRebuild();
+    const scheduleRebuild = () => {
+      if (rebuildTimer) return;
+      rebuildTimer = setTimeout(rebuild, Math.max(0, 200 - (performance.now() - lastRebuild)));
+    };
+    const onSourceData = (e: { sourceId?: string; tile?: unknown }) => {
+      if (e.sourceId === 'carto' && e.tile) scheduleRebuild();
     };
     map.on('sourcedata', onSourceData);
     map.on('moveend', scheduleRebuild);
@@ -167,7 +176,7 @@ export function TrainsLayer({
       const sel = selectedRef.current;
       const zoom = map.getZoom();
       const snapping = snapper.active && zoom >= SNAP_MIN_ZOOM;
-      const radius = snapping ? snapRadius(zoom, map.getCenter().lat) : 0;
+      if (!snapping) lastSnap.clear();
       const features: Feature<Point>[] = [];
       for (const p of prepared.current) {
         const pos = interpolatePosition(p.stops, now);
@@ -175,7 +184,12 @@ export function TrainsLayer({
         // Colle le train à la voie dessinée par la carte. Sur un tronçon sans tracé ferroviaire (ligne droite
         // de secours, ex. RER sur infrastructure RATP), la position est approximative : rayon élargi.
         const approximate = pos.state === 'running' && !p.stops[pos.index]?.path;
-        const snapped = snapping ? snapper.snap(pos.lon, pos.lat, pos.bearing, approximate ? Math.min(1500, radius * 3) : radius) : null;
+        let snapped: [number, number] | null = null;
+        if (snapping) {
+          snapped = snapper.snap(pos.lon, pos.lat, pos.bearing, approximate ? SNAP_RADIUS_APPROX_M : SNAP_RADIUS_M, lastSnap.get(p.t.id));
+          if (snapped) lastSnap.set(p.t.id, snapped);
+          else lastSnap.delete(p.t.id);
+        }
         features.push({
           type: 'Feature',
           geometry: { type: 'Point', coordinates: snapped ?? [pos.lon, pos.lat] },

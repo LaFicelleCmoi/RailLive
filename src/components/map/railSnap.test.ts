@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RailSnapper, snapRadius } from './railSnap';
+import { RailSnapper } from './railSnap';
 
 // Voie est-ouest à la latitude 43.2900 (Aubagne), et une voie nord-sud qui la croise à 5.5500
 const EW = [
@@ -41,11 +41,25 @@ describe('RailSnapper', () => {
     expect(s.snap(5.5, 43.29, 0, 500)).toBeNull();
   });
 
-  it('adapte le rayon au zoom', () => {
-    expect(snapRadius(9, 45)).toBe(500);
-    expect(snapRadius(18, 45)).toBe(60); // plancher
-    const r14 = snapRadius(14, 45); // ~270 m
-    expect(r14).toBeGreaterThan(60);
-    expect(r14).toBeLessThan(500);
+  it('reste sur la voie précédente plutôt que sauter sur une voie parallèle', () => {
+    const s = new RailSnapper();
+    const EW2 = [
+      [5.5, 43.2936],
+      [5.6, 43.2936],
+    ]; // voie parallèle à 400 m au nord
+    s.setLines([EW, EW2]);
+    // Train à mi-chemin (200 m de chaque voie), un peu plus près de EW2 : sans historique il va sur EW2…
+    expect(s.snap(5.52, 43.2919, 90, 600)![1]).toBeCloseTo(43.2936, 4);
+    // … mais s'il était sur EW à l'image précédente, il y reste
+    expect(s.snap(5.52, 43.2919, 90, 600, [5.5199, 43.29])![1]).toBeCloseTo(43.29, 4);
+  });
+
+  it('garde les voies des autres niveaux de zoom en secours', () => {
+    const s = new RailSnapper();
+    s.addLines([EW], 10);
+    s.addLines([NS], 14); // niveau affiché : seules les voies nord-sud sont chargées
+    // Loin de NS : le train est collé à la voie EW connue au niveau 10
+    const p = s.snap(5.52, 43.2927, 90, 600)!;
+    expect(p[1]).toBeCloseTo(43.29, 5);
   });
 });

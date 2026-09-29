@@ -128,9 +128,11 @@ absentes du fichier, ex. Sète), plusieurs points d’entrée candidats par gare
 d’emprunter une autre ligne).
 
 **Aimantation sur la carte** : le fond CARTO est issu d’OpenStreetMap, dont le tracé des voies diffère légèrement de celui
-de SNCF Réseau. À partir du zoom 9,5, chaque train est projeté, à chaque image, sur la voie OSM la plus proche présente dans
+de SNCF Réseau. À partir du zoom 9, chaque train est projeté, à chaque image, sur la voie OSM la plus proche présente dans
 les tuiles de la carte, en privilégiant celle orientée dans son sens de marche. Les trains collent ainsi aux rails dessinés,
 y compris sur les lignes absentes du RFN. Les voies OSM sont affichées dès le zoom 9 (le style CARTO ne les dessine qu’à 13).
+Le rayon d’aimantation est fixe en mètres (600 m, 1,5 km sur un tronçon en ligne droite) et les voies déjà lues sont conservées
+par niveau de zoom : zoomer ou dézoomer ne décroche pas les trains, même pendant le chargement des tuiles.
 
 Liens profonds : `/live?lat=43.29&lon=5.55&z=14` ouvre la carte live sur une zone précise.
 
