@@ -1,25 +1,33 @@
 import { Router, type Request, type Response } from 'express';
 import { cached } from '../cache.js';
-import { coverageBase, coverageRoot, navitiaFetch, UpstreamError } from '../navitia.js';
-import { localQuotaReached } from '../quota.js';
-import { ForbiddenPathError, InvalidParamsError, parsePath, sanitizeQuery, TTL_MS } from '../whitelist.js';
+import { coverageBase, coverageRoot, sncfFetch, UpstreamError } from '../sncf.js';
+import {
+  enforcePolicies,
+  ForbiddenPathError,
+  InvalidParamsError,
+  parsePath,
+  sanitizeQuery,
+  TTL_MS,
+  type ParsedPath,
+} from '../whitelist.js';
 import { log } from '../utils/redact.js';
 
 export const proxyRouter = Router();
 
 /**
- * GET /api/navitia/<chemin>?<params>
+ * GET /api/sncf/<chemin>?<params>
  * Le chemin et les paramètres sont validés contre une liste blanche,
- * puis l'URL amont est reconstruite côté serveur.
+ * puis l'URL de l'API SNCF est reconstruite côté serveur.
  */
 proxyRouter.get(/^\/(.*)$/, async (req: Request, res: Response) => {
   const url = new URL(req.originalUrl, 'http://local');
-  const rawPath = url.pathname.replace(/^\/api\/navitia/, '');
+  const rawPath = url.pathname.replace(/^\/api\/sncf/, '');
 
-  let parsed;
+  let parsed: ParsedPath;
   let query: string;
   try {
     parsed = parsePath(rawPath);
+    enforcePolicies(parsed.terminal, url.searchParams);
     query = sanitizeQuery(url.searchParams);
   } catch (err) {
     if (err instanceof ForbiddenPathError) {
@@ -33,28 +41,22 @@ proxyRouter.get(/^\/(.*)$/, async (req: Request, res: Response) => {
 
   const base = parsed.root ? coverageRoot : coverageBase;
   const upstreamUrl = `${base}${parsed.safePath ? `/${parsed.safePath}` : ''}${query ? `?${query}` : ''}`;
-  const ttl = TTL_MS[parsed.category];
 
   try {
-    const { value, hit } = await cached(upstreamUrl, ttl, () => {
-      if (localQuotaReached()) {
-        throw new UpstreamError(429, 'quota_exceeded', 'Quota journalier du proxy atteint');
-      }
-      return navitiaFetch(upstreamUrl);
-    });
+    const { value, hit } = await cached(upstreamUrl, TTL_MS[parsed.category], () => sncfFetch(upstreamUrl));
 
     res.setHeader('X-RailHub-Cache', hit ? 'HIT' : 'MISS');
     res.setHeader('X-RailHub-Category', parsed.category);
     res.setHeader('Cache-Control', 'private, no-store');
 
     if (value.status === 401 || value.status === 403) {
-      log.error(`Authentification Navitia refusée (${value.status}) pour ${parsed.safePath || '/'}`);
+      log.error(`Clé API SNCF refusée (${value.status}) pour ${parsed.safePath || '/'}`);
       return res.status(502).json({
-        error: { code: 'upstream_auth', message: 'Le serveur n’est pas autorisé par Navitia (token invalide ou expiré).' },
+        error: { code: 'upstream_auth', message: 'Le serveur n’est pas autorisé par l’API SNCF (clé invalide ou expirée).' },
       });
     }
     if (value.status === 429) {
-      return res.status(429).json({ error: { code: 'quota_exceeded', message: 'Quota Navitia atteint. Réessayez plus tard.' } });
+      return res.status(429).json({ error: { code: 'quota_exceeded', message: 'Quota de l’API SNCF atteint. Réessayez plus tard.' } });
     }
 
     res.status(value.status).type('application/json').send(value.body);

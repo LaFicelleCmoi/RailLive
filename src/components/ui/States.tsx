@@ -57,7 +57,7 @@ export function ErrorState({ error, onRetry, className }: { error: unknown; onRe
           <div>
             <p className="font-semibold text-wait-300">Quota d’appels atteint</p>
             <p className="mt-1 text-sm text-ink-300">
-              Le quota gratuit de l’API Navitia est épuisé pour aujourd’hui. Les données déjà en cache restent disponibles ; le
+              Le quota quotidien de l’API SNCF est épuisé pour aujourd’hui. Les données déjà en cache restent disponibles ; le
               service reprendra automatiquement au prochain cycle.
             </p>
           </div>
@@ -70,7 +70,7 @@ export function ErrorState({ error, onRetry, className }: { error: unknown; onRe
   const title = isNetwork
     ? 'Serveur RailHub injoignable'
     : api?.code === 'upstream_auth'
-      ? 'Accès à Navitia refusé'
+      ? 'Accès à l’API SNCF refusé'
       : api?.code === 'rate_limited'
         ? 'Trop de requêtes'
         : api?.status === 404

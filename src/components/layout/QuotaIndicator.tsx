@@ -26,7 +26,7 @@ export function QuotaIndicator({ compact }: { compact?: boolean }) {
     <Link
       to="/status"
       className="group flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors hover:bg-white/[0.04]"
-      title={`Appels Navitia aujourd'hui : ${usedToday} / ${dailyQuota}. Taux de cache : ${Math.round(hitRate * 100)} %`}
+      title={`Appels à l'API SNCF aujourd'hui : ${usedToday} / ${dailyQuota}. Taux de cache : ${Math.round(hitRate * 100)} %`}
     >
       {!compact && <span className="text-[11px] font-medium text-ink-500">Quota API</span>}
       <span className="relative h-1.5 w-16 overflow-hidden rounded-full bg-white/[0.07]">

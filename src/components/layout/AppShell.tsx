@@ -98,7 +98,7 @@ export function AppShell({ topbar, banner }: { topbar?: ReactNode; banner?: Reac
         <div className="border-t border-white/[0.06] p-3">
           <QuotaIndicator />
           <p className="mt-2 px-2 text-[10px] leading-snug text-ink-600">
-            Données SNCF via Navitia. Positions des trains estimées.
+            Données API SNCF. Positions des trains estimées.
           </p>
         </div>
       </aside>

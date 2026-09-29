@@ -12,7 +12,7 @@ export function PageHeader({
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
-  /** Endpoint(s) Navitia exploités, affichés en discret */
+  /** Endpoint(s) de l'API SNCF exploités, affichés en discret */
   endpoint?: string | string[];
 }) {
   const endpoints = endpoint ? (Array.isArray(endpoint) ? endpoint : [endpoint]) : [];

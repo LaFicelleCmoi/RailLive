@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Vérifie qu'aucun secret ni source map ne se retrouve dans le build front (dist/).
- * Échoue (code 1) si le token Navitia, une référence à NAVITIA_TOKEN ou un .map est trouvé.
+ * Échoue (code 1) si la clé API SNCF, une référence à SNCF_API_KEY ou un .map est trouvé.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,13 +18,13 @@ if (!fs.existsSync(dist)) {
 function readToken() {
   const envPath = path.join(root, 'server', '.env');
   if (!fs.existsSync(envPath)) return null;
-  const m = fs.readFileSync(envPath, 'utf8').match(/^\s*NAVITIA_TOKEN\s*=\s*["']?([^"'\r\n]+)/m);
+  const m = fs.readFileSync(envPath, 'utf8').match(/^\s*SNCF_API_KEY\s*=\s*["']?([^"'\r\n]+)/m);
   return m ? m[1].trim() : null;
 }
 
 const token = readToken();
 const tokenB64 = token ? Buffer.from(`${token}:`).toString('base64') : null;
-const needles = ['NAVITIA_TOKEN', 'api.navitia.io', 'api.sncf.com', ...(token ? [token, tokenB64] : [])];
+const needles = ['SNCF_API_KEY', 'NAVITIA_TOKEN', 'api.navitia.io', 'api.sncf.com', ...(token ? [token, tokenB64] : [])];
 const problems = [];
 
 function walk(dir) {
@@ -39,7 +39,7 @@ function walk(dir) {
       for (const needle of needles) {
         if (content.includes(needle)) {
           const secret = needle === token || needle === tokenB64;
-          problems.push(`${rel} : contient ${secret ? 'le TOKEN Navitia' : `« ${needle} »`}`);
+          problems.push(`${rel} : contient ${secret ? 'la CLÉ API SNCF' : `« ${needle} »`}`);
         }
       }
       if (/sourceMappingURL=/.test(content)) problems.push(`${rel} : référence sourceMappingURL`);
@@ -53,4 +53,4 @@ if (problems.length) {
   console.error('\n✖ Vérification des secrets ÉCHOUÉE :\n' + problems.map((p) => `  - ${p}`).join('\n') + '\n');
   process.exit(1);
 }
-console.log(`✔ dist/ vérifié : aucun token, aucune URL Navitia directe, aucune source map${token ? '' : ' (server/.env absent : token non testé)'}.`);
+console.log(`✔ dist/ vérifié : aucune clé, aucune URL directe de l’API SNCF, aucune source map${token ? '' : ' (server/.env absent : clé non testée)'}.`);

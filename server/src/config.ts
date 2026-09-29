@@ -8,15 +8,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(here, '../.env'), quiet: true });
 
 const EnvSchema = z.object({
-  NAVITIA_TOKEN: z
-    .string({ error: 'NAVITIA_TOKEN manquant dans server/.env' })
+  SNCF_API_KEY: z
+    .string({ error: 'SNCF_API_KEY manquant dans server/.env' })
     .trim()
-    .min(10, 'NAVITIA_TOKEN semble invalide (trop court)'),
-  NAVITIA_BASE_URL: z.url().default('https://api.sncf.com/v1'),
-  NAVITIA_COVERAGE: z
-    .string()
-    .regex(/^[a-z0-9_-]+$/i)
-    .default('sncf'),
+    .min(10, 'SNCF_API_KEY semble invalide (trop court)'),
+  SNCF_API_BASE_URL: z.url().default('https://api.sncf.com/v1'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   ALLOWED_ORIGIN: z.string().default('http://localhost:5173'),
   DAILY_QUOTA: z.coerce.number().int().positive().default(5000),
@@ -36,6 +32,8 @@ if (!parsed.success) {
 
 export const config = Object.freeze({
   ...parsed.data,
+  /** L'API SNCF n'expose qu'une couverture : « sncf ». */
+  COVERAGE: 'sncf',
   allowedOrigins: parsed.data.ALLOWED_ORIGIN.split(',')
     .map((o) => o.trim())
     .filter(Boolean),
@@ -44,6 +42,6 @@ export const config = Object.freeze({
 
 /** Valeurs sensibles à masquer dans tout log ou message d'erreur. */
 export const SECRETS: readonly string[] = [
-  config.NAVITIA_TOKEN,
-  Buffer.from(`${config.NAVITIA_TOKEN}:`).toString('base64'),
+  config.SNCF_API_KEY,
+  Buffer.from(`${config.SNCF_API_KEY}:`).toString('base64'),
 ];

@@ -50,8 +50,8 @@ export function toQueryString(params: Params = {}): string {
   return s ? `?${s}` : '';
 }
 
-/** Messages lisibles pour les erreurs Navitia connues (champ error.id). */
-const NAVITIA_ERRORS: Record<string, string> = {
+/** Messages lisibles pour les erreurs connues de l'API SNCF (champ error.id). */
+const API_ERRORS: Record<string, string> = {
   no_solution: 'Aucune solution trouvée pour ces critères.',
   unknown_object: 'Objet introuvable dans le référentiel SNCF.',
   no_origin: 'Point de départ introuvable.',
@@ -63,12 +63,12 @@ const NAVITIA_ERRORS: Record<string, string> = {
 };
 
 /**
- * Appelle le proxy : GET /api/navitia/<path>?<params>.
- * Le token n'existe jamais côté client.
+ * Appelle le proxy : GET /api/sncf/<path>?<params>.
+ * La clé API SNCF n'existe jamais côté client.
  */
-export async function navitia<T extends BaseResponse>(path: string, params?: Params, signal?: AbortSignal): Promise<T> {
+export async function sncf<T extends BaseResponse>(path: string, params?: Params, signal?: AbortSignal): Promise<T> {
   const clean = path.replace(/^\/+/, '');
-  return getJson<T>(`/api/navitia/${clean}${toQueryString(params)}`, signal);
+  return getJson<T>(`/api/sncf/${clean}${toQueryString(params)}`, signal);
 }
 
 export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -98,13 +98,13 @@ export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> 
       throw new ApiError(429, code, err?.message ?? 'Quota atteint.');
     }
     const code = err?.code ?? err?.id ?? (res.status === 404 ? 'not_found' : 'internal');
-    const message = (err?.id && NAVITIA_ERRORS[err.id]) || err?.message || `Erreur ${res.status}`;
+    const message = (err?.id && API_ERRORS[err.id]) || err?.message || `Erreur ${res.status}`;
     throw new ApiError(res.status, code, message, err?.details);
   }
 
-  // Navitia renvoie parfois 200 avec un champ error (ex. no_solution)
+  // L'API renvoie parfois 200 avec un champ error (ex. no_solution)
   if (err?.id && !(data as Record<string, unknown>)?.journeys) {
-    throw new ApiError(404, err.id, NAVITIA_ERRORS[err.id] ?? err.message ?? 'Erreur Navitia');
+    throw new ApiError(404, err.id, API_ERRORS[err.id] ?? err.message ?? 'Erreur de l’API SNCF');
   }
   return data as T;
 }

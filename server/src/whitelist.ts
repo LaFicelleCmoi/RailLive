@@ -5,7 +5,10 @@ import { z } from 'zod';
 /*  chemin := ( objet "/" id ){0,3} ( collection | action )?           */
 /* ------------------------------------------------------------------ */
 
-/** Collections du référentiel (PT-Ref), utilisables en listing ou en préfixe « collection/{id} ». */
+/**
+ * Collections du référentiel disponibles sur l'API SNCF (voir docs/API_SNCF.md).
+ * pois, poi_types, calendars et line_groups renvoient 404 sur l'API SNCF : exclus.
+ */
 export const COLLECTIONS = new Set([
   'networks',
   'lines',
@@ -15,18 +18,18 @@ export const COLLECTIONS = new Set([
   'commercial_modes',
   'physical_modes',
   'companies',
-  'pois',
-  'poi_types',
   'vehicle_journeys',
   'trips',
-  'calendars',
   'disruptions',
-  'line_groups',
   'contributors',
   'datasets',
 ]);
 
-/** Actions terminales (doivent être le dernier segment). */
+/**
+ * Actions terminales (doivent être le dernier segment).
+ * heat_maps est indisponible sur l'API SNCF (pas de réseau viaire) : remplacé par /api/insights/reachable.
+ * line_reports et equipment_reports répondent mais sans données : conservés pour l'affichage « non renseigné ».
+ */
 export const ACTIONS = new Set([
   'departures',
   'arrivals',
@@ -39,7 +42,6 @@ export const ACTIONS = new Set([
   'places_nearby',
   'journeys',
   'isochrones',
-  'heat_maps',
   'places',
   'pt_objects',
   'status',
@@ -64,6 +66,8 @@ export interface ParsedPath {
   /** Chemin sûr, ré-encodé segment par segment, relatif à la couverture. */
   safePath: string;
   category: CacheCategory;
+  /** Dernier segment action/collection, pour les règles spécifiques */
+  terminal?: string | null;
   /** Cible spéciale hors couverture (/coverage) */
   root?: boolean;
 }
@@ -143,7 +147,52 @@ export function parsePath(rawPath: string): ParsedPath {
 
   if (pairs > 3) throw new ForbiddenPathError('Trop de niveaux d’imbrication');
 
-  return { safePath: out.join('/'), category: categorize(terminal, lastCollection) };
+  return { safePath: out.join('/'), category: categorize(terminal, lastCollection), terminal };
+}
+
+/** Date courante au format de l'API (YYYYMMDDTHHMMSS), heure de Paris, à la minute. */
+export function parisNow(offsetMs = 0): string {
+  const p: Record<string, string> = {};
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  for (const { type, value } of fmt.formatToParts(new Date(Date.now() + offsetMs))) p[type] = value;
+  return `${p.year}${p.month}${p.day}T${p.hour}${p.minute}00`;
+}
+
+/**
+ * Règles propres à l'API SNCF, appliquées avant la validation :
+ * elles protègent le quota et évitent les réponses de plusieurs mégaoctets.
+ */
+export function enforcePolicies(terminal: string | null | undefined, search: URLSearchParams): void {
+  switch (terminal) {
+    case 'route_schedules':
+      // Non bornée, une grille pèse jusqu'à ~11 Mo (RER A). items_per_schedule est ignoré par l'API :
+      // seule `duration` borne réellement la réponse (RER A : ~1 Mo pour 1 h). Défaut 1 h, maximum 4 h.
+      if (!search.has('from_datetime')) search.set('from_datetime', parisNow());
+      if (!search.has('duration')) search.set('duration', '3600');
+      if (Number(search.get('duration')) > 4 * 3600) throw new InvalidParamsError(['duration : 4 h maximum']);
+      break;
+    case 'journeys':
+      // Sans destination, la réponse fait ~8 Mo : réservé à l'agrégation serveur /api/insights/reachable.
+      if (!search.get('from') || !search.get('to')) {
+        throw new InvalidParamsError(['from et to sont obligatoires (voir /api/insights/reachable)']);
+      }
+      break;
+    case 'isochrones': {
+      if (!search.get('from')) throw new InvalidParamsError(['from est obligatoire']);
+      if (search.getAll('boundary_duration[]').length > 4) throw new InvalidParamsError(['4 bornes maximum']);
+      const max = Math.max(Number(search.get('max_duration') ?? 0), ...search.getAll('boundary_duration[]').map(Number));
+      if (max > 4 * 3600) throw new InvalidParamsError(['durée maximale : 4 h']);
+      break;
+    }
+  }
 }
 
 function categorize(terminal: string | null, lastCollection: string | null): CacheCategory {
@@ -151,7 +200,7 @@ function categorize(terminal: string | null, lastCollection: string | null): Cac
     if (REALTIME_ACTIONS.has(terminal)) return 'realtime';
     if (SCHEDULE_ACTIONS.has(terminal)) return 'schedule';
     if (terminal === 'journeys') return 'journeys';
-    if (terminal === 'isochrones' || terminal === 'heat_maps' || terminal === 'places_nearby') return 'geo';
+    if (terminal === 'isochrones' || terminal === 'places_nearby') return 'geo';
     if (terminal === 'places' || terminal === 'pt_objects') return 'search';
     if (terminal === 'status') return 'status';
     if (REALTIME_COLLECTIONS.has(terminal)) return 'realtime';
@@ -222,7 +271,6 @@ export const PARAMS: Record<string, z.ZodType> = {
     ]),
     11,
   ),
-  'add_poi_infos[]': arr(z.enum(['bss_stands', 'car_park']), 2),
   distance: int(1, 50_000),
   // Itinéraires
   from: id,
@@ -244,9 +292,9 @@ export const PARAMS: Record<string, z.ZodType> = {
   direct_path: z.enum(['indifferent', 'only', 'none', 'only_with_alternatives']),
   traveler_type: z.enum(['standard', 'slow_walker', 'fast_walker', 'luggage', 'wheelchair']),
   timeframe_duration: int(0, 86_400),
-  // Isochrones / heat maps
-  'boundary_duration[]': arr(int(60, 86_400), 10),
-  resolution: int(50, 1000),
+  is_journey_schedules: bool,
+  // Isochrones
+  'boundary_duration[]': arr(int(60, 86_400), 4),
   // Horaires
   from_datetime: dt,
   until_datetime: dt,

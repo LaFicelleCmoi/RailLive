@@ -81,7 +81,7 @@ app.use('/api', (req, res, next) => {
 
 app.use('/api/meta', metaRouter);
 app.use('/api/live', liveLimiter, liveRouter);
-app.use('/api/navitia', apiLimiter, proxyRouter);
+app.use('/api/sncf', apiLimiter, proxyRouter);
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Endpoint inconnu' } });
 });
@@ -115,5 +115,5 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 app.listen(config.PORT, () => {
-  log.info(`Proxy prêt sur http://localhost:${config.PORT} (couverture « ${config.NAVITIA_COVERAGE} », ${config.NODE_ENV})`);
+  log.info(`Proxy API SNCF prêt sur http://localhost:${config.PORT} (${config.NODE_ENV})`);
 });

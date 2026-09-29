@@ -6,7 +6,7 @@ import { config } from '../config.js';
 export const metaRouter = Router();
 
 metaRouter.get('/health', (_req, res) => {
-  res.json({ ok: true, coverage: config.NAVITIA_COVERAGE, uptimeSec: Math.round(process.uptime()) });
+  res.json({ ok: true, provider: 'API SNCF', coverage: config.COVERAGE, uptimeSec: Math.round(process.uptime()) });
 });
 
 metaRouter.get('/quota', (_req, res) => {
