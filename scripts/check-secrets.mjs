@@ -23,7 +23,8 @@ function readToken() {
 }
 
 const token = readToken();
-const needles = ['NAVITIA_TOKEN', 'api.navitia.io', ...(token ? [token] : [])];
+const tokenB64 = token ? Buffer.from(`${token}:`).toString('base64') : null;
+const needles = ['NAVITIA_TOKEN', 'api.navitia.io', 'api.sncf.com', ...(token ? [token, tokenB64] : [])];
 const problems = [];
 
 function walk(dir) {
@@ -37,7 +38,8 @@ function walk(dir) {
       const content = fs.readFileSync(full, 'utf8');
       for (const needle of needles) {
         if (content.includes(needle)) {
-          problems.push(`${rel} : contient ${needle === token ? 'le TOKEN Navitia' : `« ${needle} »`}`);
+          const secret = needle === token || needle === tokenB64;
+          problems.push(`${rel} : contient ${secret ? 'le TOKEN Navitia' : `« ${needle} »`}`);
         }
       }
       if (/sourceMappingURL=/.test(content)) problems.push(`${rel} : référence sourceMappingURL`);

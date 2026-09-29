@@ -12,14 +12,14 @@ const EnvSchema = z.object({
     .string({ error: 'NAVITIA_TOKEN manquant dans server/.env' })
     .trim()
     .min(10, 'NAVITIA_TOKEN semble invalide (trop court)'),
-  NAVITIA_BASE_URL: z.url().default('https://api.navitia.io/v1'),
+  NAVITIA_BASE_URL: z.url().default('https://api.sncf.com/v1'),
   NAVITIA_COVERAGE: z
     .string()
     .regex(/^[a-z0-9_-]+$/i)
     .default('sncf'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   ALLOWED_ORIGIN: z.string().default('http://localhost:5173'),
-  DAILY_QUOTA: z.coerce.number().int().positive().default(3000),
+  DAILY_QUOTA: z.coerce.number().int().positive().default(5000),
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -43,4 +43,7 @@ export const config = Object.freeze({
 });
 
 /** Valeurs sensibles à masquer dans tout log ou message d'erreur. */
-export const SECRETS: readonly string[] = [config.NAVITIA_TOKEN];
+export const SECRETS: readonly string[] = [
+  config.NAVITIA_TOKEN,
+  Buffer.from(`${config.NAVITIA_TOKEN}:`).toString('base64'),
+];

@@ -4,6 +4,9 @@ import type { CachedResponse } from './cache.js';
 
 const TIMEOUT_MS = 15_000;
 
+// Basic Auth : clé en nom d'utilisateur, mot de passe vide (accepté par api.sncf.com et api.navitia.io).
+const AUTH_HEADER = `Basic ${Buffer.from(`${config.NAVITIA_TOKEN}:`).toString('base64')}`;
+
 export class UpstreamError extends Error {
   constructor(
     public readonly status: number,
@@ -28,7 +31,7 @@ export async function navitiaFetch(url: string): Promise<CachedResponse> {
   try {
     const res = await fetch(url, {
       headers: {
-        Authorization: config.NAVITIA_TOKEN,
+        Authorization: AUTH_HEADER,
         Accept: 'application/json',
         'Accept-Encoding': 'gzip, deflate',
         'User-Agent': 'RailHub/0.1 (+proxy)',
