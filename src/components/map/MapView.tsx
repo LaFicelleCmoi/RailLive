@@ -27,9 +27,21 @@ export interface MapViewProps {
   interactive?: boolean;
   /** Masque le contrôle de navigation */
   bare?: boolean;
+  controlsPosition?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 }
 
-export function MapView({ center = FRANCE_CENTER, zoom = 5, bounds, className, children, onClick, onReady, interactive = true, bare }: MapViewProps) {
+export function MapView({
+  center = FRANCE_CENTER,
+  zoom = 5,
+  bounds,
+  className,
+  children,
+  onClick,
+  onReady,
+  interactive = true,
+  bare,
+  controlsPosition = 'top-right',
+}: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<MlMap | null>(null);
   const [failed, setFailed] = useState(false);
@@ -60,7 +72,7 @@ export function MapView({ center = FRANCE_CENTER, zoom = 5, bounds, className, c
       setFailed(true);
       return;
     }
-    if (!bare && interactive) instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    if (!bare && interactive) instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), controlsPosition);
     instance.touchZoomRotate.disableRotation();
     instance.on('load', () => {
       setMap(instance);

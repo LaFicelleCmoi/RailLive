@@ -25,6 +25,10 @@ const routes: RouteObject[] = [
       { path: 'journeys', lazy: page(() => import('./pages/Journeys')) },
       { path: 'isochrones', handle: FULL, lazy: page(() => import('./pages/Isochrones')) },
       { path: 'heatmap', handle: FULL, lazy: page(() => import('./pages/HeatMap')) },
+      // Modules 4 & 5 · Trains et carte live
+      { path: 'train/:id', lazy: page(() => import('./pages/Train')) },
+      { path: 'trips', lazy: page(() => import('./pages/Trips')) },
+      { path: 'live', handle: FULL, lazy: page(() => import('./pages/LiveMap')) },
       // Module 3 · Horaires
       { path: 'board', lazy: page(() => import('./pages/Board')) },
       { path: 'schedules', lazy: page(() => import('./pages/Schedules')) },
