@@ -39,6 +39,8 @@ const routes: RouteObject[] = [
       { path: 'catalog/:type/:id', lazy: page(() => import('./pages/ObjectDetail')) },
       { path: 'lines/:id', lazy: page(() => import('./pages/Line')) },
       { path: 'networks/:id', lazy: page(() => import('./pages/Network')) },
+      // Module 8 · Méta
+      { path: 'status', lazy: page(() => import('./pages/Status')) },
       // Module 3 · Horaires
       { path: 'board', lazy: page(() => import('./pages/Board')) },
       { path: 'schedules', lazy: page(() => import('./pages/Schedules')) },
