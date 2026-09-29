@@ -41,13 +41,25 @@ export function Card({
 }
 
 /** Indicateur chiffré (KPI). */
-export function Stat({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'info' | 'wait' | 'alert' | 'ok' }) {
+export function Stat({
+  label,
+  value,
+  hint,
+  tone,
+  size = 'md',
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: 'info' | 'wait' | 'alert' | 'ok';
+  size?: 'sm' | 'md';
+}) {
   const color =
     tone === 'alert' ? 'text-alert-300' : tone === 'wait' ? 'text-wait-300' : tone === 'ok' ? 'text-ok-400' : tone === 'info' ? 'text-info-300' : 'text-ink-50';
   return (
-    <div className="panel p-4">
-      <p className="eyebrow text-[10px]">{label}</p>
-      <p className={clsx('mt-2 font-mono text-2xl font-semibold tabular', color)}>{value}</p>
+    <div className={clsx('panel', size === 'sm' ? 'p-3' : 'p-4')}>
+      <p className="eyebrow truncate text-[10px]">{label}</p>
+      <p className={clsx('mt-1.5 font-mono font-semibold whitespace-nowrap tabular', size === 'sm' ? 'text-base' : 'text-2xl', color)}>{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>}
     </div>
   );

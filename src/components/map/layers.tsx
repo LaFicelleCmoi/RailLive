@@ -7,7 +7,9 @@ import type { LngLat } from '@/utils/geo';
 
 export const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
-type LayerDef = Omit<LayerSpecification, 'source'> & { id: string };
+/** Omit distributif : conserve les propriétés propres à chaque type de couche (filter, minzoom…). */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+export type LayerDef = DistributiveOmit<Exclude<LayerSpecification, { type: 'background' }>, 'source'>;
 
 /**
  * Source GeoJSON + couches associées. Les couches sont créées une fois,

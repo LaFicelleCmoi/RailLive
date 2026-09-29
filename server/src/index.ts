@@ -10,6 +10,7 @@ import { config } from './config.js';
 import { proxyRouter } from './routes/proxy.js';
 import { metaRouter } from './routes/meta.js';
 import { liveRouter } from './routes/live.js';
+import { insightsRouter } from './routes/insights.js';
 import { log } from './utils/redact.js';
 
 const app = express();
@@ -81,6 +82,7 @@ app.use('/api', (req, res, next) => {
 
 app.use('/api/meta', metaRouter);
 app.use('/api/live', liveLimiter, liveRouter);
+app.use('/api/insights', liveLimiter, insightsRouter);
 app.use('/api/sncf', apiLimiter, proxyRouter);
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Endpoint inconnu' } });
