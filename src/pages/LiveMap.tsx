@@ -15,7 +15,8 @@ import { ErrorState } from '@/components/ui/States';
 import { Timeline, type TimelineItem } from '@/components/Timeline/Timeline';
 import { useLiveTrains, type LiveTrain } from '@/api/hooks/trains';
 import { LIVE_MODES, MODE_META, type TrainMode } from '@/utils/modes';
-import { FRANCE_BOUNDS, FRANCE_CENTER, haversine } from '@/utils/geo';
+import { FRANCE_BOUNDS, FRANCE_CENTER, haversine, type LngLat } from '@/utils/geo';
+import { decodePolyline } from '@/utils/polyline';
 import { useNow } from '@/utils/hooks';
 
 interface View {
@@ -117,18 +118,38 @@ export default function LiveMapPage() {
   const delayed = trains.filter((t) => t.dl > 0).length;
   const sel = selected ? all.find((t) => t.id === selected) ?? null : null;
 
-  // Réseau : tracé des circulations chargées (l'API SNCF ne fournit pas la géométrie des lignes)
-  const networkFC = useMemo<FeatureCollection>(
-    () => ({
+  // Réseau : tracé réel des circulations chargées (rails du RFN, ligne droite là où il n'est pas couvert)
+  const segments = live.data?.segments;
+  const decoded = useRef(new Map<string, LngLat[]>());
+  const networkFC = useMemo<FeatureCollection>(() => {
+    const cache = decoded.current;
+    const geometryOf = (t: LiveTrain): LngLat[] => {
+      const out: LngLat[] = [];
+      t.s.forEach(([lon, lat], i) => {
+        if (i === t.s.length - 1) {
+          out.push([lon, lat]);
+          return;
+        }
+        const idx = t.p?.[i];
+        const enc = idx !== undefined && idx >= 0 ? segments?.[idx] : undefined;
+        if (!enc) {
+          out.push([lon, lat]);
+          return;
+        }
+        if (!cache.has(enc)) cache.set(enc, decodePolyline(enc));
+        out.push(...cache.get(enc)!.slice(0, -1));
+      });
+      return out;
+    };
+    return {
       type: 'FeatureCollection',
       features: trains.map((t) => ({
         type: 'Feature',
         properties: { c: MODE_META[t.m].color, sel: t.id === selected ? 1 : 0 },
-        geometry: { type: 'LineString', coordinates: t.s.map(([lon, lat]) => [lon, lat]) },
+        geometry: { type: 'LineString', coordinates: geometryOf(t) },
       })),
-    }),
-    [trains, selected],
-  );
+    };
+  }, [trains, selected, segments]);
 
   const updated = live.data ? new Date(live.data.generatedAt * 1000).toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris' }) : null;
 
@@ -147,12 +168,13 @@ export default function LiveMapPage() {
               paint: {
                 'line-color': ['get', 'c'],
                 'line-width': ['case', ['==', ['get', 'sel'], 1], 3, ['interpolate', ['linear'], ['zoom'], 4, 0.6, 10, 1.4]],
-                'line-opacity': ['case', ['==', ['get', 'sel'], 1], 0.95, 0.16],
+                // Les voies deviennent plus lisibles en zoomant : on voit les trains les suivre
+                'line-opacity': ['case', ['==', ['get', 'sel'], 1], 0.95, ['interpolate', ['linear'], ['zoom'], 5, 0.16, 9, 0.35, 12, 0.5]],
               },
             },
           ]}
         />
-        <TrainsLayer trains={trains} selected={selected} onSelect={setSelected} onFrame={setVisible} />
+        <TrainsLayer trains={trains} segments={segments} selected={selected} onSelect={setSelected} onFrame={setVisible} />
       </MapView>
 
       {/* Barre de contrôle */}

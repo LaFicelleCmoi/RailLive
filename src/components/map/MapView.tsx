@@ -81,7 +81,7 @@ export function MapView({
         zoom,
         bounds,
         fitBoundsOptions: { padding: 40 },
-        attributionControl: { compact: true },
+        attributionControl: { compact: true, customAttribution: 'Voies © SNCF Réseau (ODbL) · Horaires API SNCF' },
         interactive,
         dragRotate: false,
         pitchWithRotate: false,

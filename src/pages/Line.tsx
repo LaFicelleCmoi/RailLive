@@ -12,6 +12,7 @@ import { MAP_FONT, MapView } from '@/components/map/MapView';
 import { FitBounds, GeoJsonLayer, pointsFC } from '@/components/map/layers';
 import { useLine, useLineRoutes } from '@/api/hooks/schedules';
 import { useLineDisruptions, useLineStopAreas, useLineVehicleJourneys } from '@/api/hooks/catalog';
+import { useRailPath } from '@/api/hooks/trains';
 import { classifyMode, displayColor } from '@/utils/modes';
 import { formatHms } from '@/utils/navitiaDate';
 import { toLngLat, type LngLat } from '@/utils/geo';
@@ -31,7 +32,10 @@ export default function LinePage() {
 
   // Tracé : l'API SNCF ne fournit pas de géométrie → on relie les arrêts de la circulation la plus longue
   const longest = useMemo(() => [...(vjs.data ?? [])].sort((a, b) => b.stop_times.length - a.stop_times.length)[0], [vjs.data]);
-  const path = useMemo<LngLat[]>(() => (longest?.stop_times ?? []).map((st) => toLngLat(st.stop_point.coord)).filter((x): x is LngLat => !!x), [longest]);
+  const stopsPath = useMemo<LngLat[]>(() => (longest?.stop_times ?? []).map((st) => toLngLat(st.stop_point.coord)).filter((x): x is LngLat => !!x), [longest]);
+  // Tracé sur les rails du RFN (ligne droite entre deux gares si le tronçon n'est pas couvert)
+  const rail = useRailPath(stopsPath.length > 1 ? stopsPath : null);
+  const path = useMemo<LngLat[]>(() => (rail.data ? rail.data.flatMap((seg, i) => (i === 0 ? seg : seg.slice(1))) : stopsPath), [rail.data, stopsPath]);
   const pathFC = useMemo<FeatureCollection>(
     () => ({ type: 'FeatureCollection', features: path.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: path } }] : [] }),
     [path],
@@ -98,7 +102,9 @@ export default function LinePage() {
               <FitBounds points={path.length ? path : saPoints.map((p) => p.lngLat)} padding={40} maxZoom={11} />
             </MapView>
           </div>
-          <p className="-mt-3 text-[11px] text-ink-500">Tracé reconstruit à partir des arrêts d’une circulation : l’API SNCF ne fournit pas la géométrie des lignes.</p>
+          <p className="-mt-3 text-[11px] text-ink-500">
+            Tracé reconstruit sur les voies du Réseau Ferré National (SNCF Réseau, ODbL) à partir des arrêts d’une circulation : l’API SNCF ne fournit pas la géométrie des lignes.
+          </p>
 
           <Card title="Parcours" eyebrow={`${routes.data?.length ?? '…'} parcours`}>
             {routes.isLoading && <SkeletonRows rows={2} />}

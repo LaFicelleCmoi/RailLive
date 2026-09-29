@@ -4,6 +4,8 @@ import { seg } from '../params';
 import type { LinesResponse, VehicleJourneysResponse } from '@/types/navitia';
 import type { TrainMode } from '@/utils/modes';
 import { parisYmd } from '@/utils/navitiaDate';
+import { decodePolyline } from '@/utils/polyline';
+import type { LngLat } from '@/utils/geo';
 
 export function useVehicleJourney(id: string | undefined) {
   return useQuery({
@@ -76,6 +78,8 @@ export interface LiveTrain {
   dl: number;
   msg?: string;
   s: LiveStop[];
+  /** Index dans `segments` du tracé ferroviaire vers l'arrêt suivant ; -1 = ligne droite */
+  p?: number[];
 }
 export interface LiveResponse {
   generatedAt: number;
@@ -83,7 +87,26 @@ export interface LiveResponse {
   count: number;
   regional: number;
   radiusKm: number | null;
+  /** Tracés encodés (polyline), partagés entre les trains */
+  segments?: string[];
   trains: LiveTrain[];
+}
+
+/**
+ * Tracés sur les rails entre points successifs (gares), calculés par le serveur sur le graphe du RFN.
+ * Chaque segment non couvert est remplacé par une ligne droite.
+ */
+export function useRailPath(points: LngLat[] | null) {
+  const pts = points && points.length >= 2 ? points.slice(0, 120) : null;
+  const key = pts?.map((p) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`).join(';');
+  return useQuery({
+    queryKey: ['rail-path', key],
+    enabled: !!key,
+    staleTime: 24 * 60 * 60_000,
+    retry: false,
+    queryFn: ({ signal }) => getJson<{ ready: boolean; segments: (string | null)[] }>(`/api/geo/rail?pts=${key}`, signal),
+    select: (d): LngLat[][] => d.segments.map((s, i) => (s ? decodePolyline(s) : [pts![i]!, pts![i + 1]!])),
+  });
 }
 
 export function useLiveTrains(view: { lon: number; lat: number; zoom: number; radius: number } | null) {

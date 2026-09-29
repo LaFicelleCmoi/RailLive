@@ -26,6 +26,10 @@ et éventuellement `DAILY_QUOTA` / `RATE_LIMIT_PER_MINUTE`.
 
 ## Points d’attention
 
+- **Réseau ferré** : au premier démarrage, le serveur télécharge ~9 Mo depuis `ressources.data.sncf.com` et les écrit
+  dans `server/data/`. Le serveur doit donc pouvoir sortir sur Internet et écrire dans ce dossier (volume persistant
+  recommandé). En cas d’échec, l’application fonctionne mais les trains suivent des lignes droites.
+
 - **Une seule instance** recommandée : le cache et le compteur de quota sont en mémoire. Pour plusieurs instances,
   remplacez `server/src/cache.ts` et `server/src/quota.ts` par un stockage partagé (Redis).
 - Le rate limiting utilise l’IP client : avec un reverse proxy, `TRUST_PROXY` doit être correct, sinon toutes

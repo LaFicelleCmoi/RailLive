@@ -11,6 +11,8 @@ import { proxyRouter } from './routes/proxy.js';
 import { metaRouter } from './routes/meta.js';
 import { liveRouter } from './routes/live.js';
 import { insightsRouter } from './routes/insights.js';
+import { geoRouter } from './routes/geo.js';
+import { loadRailGraph } from './rail/graph.js';
 import { log } from './utils/redact.js';
 
 const app = express();
@@ -83,6 +85,7 @@ app.use('/api', (req, res, next) => {
 app.use('/api/meta', metaRouter);
 app.use('/api/live', liveLimiter, liveRouter);
 app.use('/api/insights', liveLimiter, insightsRouter);
+app.use('/api/geo', apiLimiter, geoRouter);
 app.use('/api/sncf', apiLimiter, proxyRouter);
 app.use('/api', (_req, res) => {
   res.status(404).json({ error: { code: 'not_found', message: 'Endpoint inconnu' } });
@@ -118,4 +121,6 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 app.listen(config.PORT, () => {
   log.info(`Proxy API SNCF prêt sur http://localhost:${config.PORT} (${config.NODE_ENV})`);
+  // Chargement du réseau ferré en arrière-plan (les trains suivent des lignes droites en attendant)
+  void loadRailGraph();
 });

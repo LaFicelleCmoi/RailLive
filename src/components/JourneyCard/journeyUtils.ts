@@ -42,15 +42,29 @@ export function ptSections(j: Journey): Section[] {
   return j.sections.filter((s) => s.type === 'public_transport' || s.type === 'on_demand_transport');
 }
 
-/** Géométries des sections d'un trajet, colorées par mode. */
-export function journeyFC(j: Journey | undefined, selected = true): FeatureCollection {
+/** Arrêts successifs des sections en train d'un trajet, avec la plage d'indices de chaque section. */
+export function ptStopsOf(j: Journey | undefined): { points: LngLat[]; ranges: Map<string, [number, number]> } {
+  const points: LngLat[] = [];
+  const ranges = new Map<string, [number, number]>();
+  for (const s of j?.sections ?? []) {
+    if (s.type !== 'public_transport') continue;
+    const pts = (s.stop_date_times ?? []).map((sdt) => toLngLat(sdt.stop_point?.coord)).filter((x): x is LngLat => !!x);
+    if (pts.length < 2) continue;
+    ranges.set(s.id, [points.length, points.length + pts.length - 1]);
+    points.push(...pts);
+  }
+  return { points, ranges };
+}
+
+/** Géométries des sections d'un trajet, colorées par mode. `overrides` : tracés sur rails par section. */
+export function journeyFC(j: Journey | undefined, selected = true, overrides?: Map<string, LngLat[]>): FeatureCollection {
   if (!j) return { type: 'FeatureCollection', features: [] };
   return {
     type: 'FeatureCollection',
     features: j.sections
       .filter((s) => s.geojson?.coordinates?.length || (s.from && s.to))
       .map((s) => {
-        let coords: LngLat[] = (s.geojson?.coordinates ?? []) as LngLat[];
+        let coords: LngLat[] = overrides?.get(s.id) ?? ((s.geojson?.coordinates ?? []) as LngLat[]);
         if (!coords.length) {
           const a = placeLngLat(s.from);
           const b = placeLngLat(s.to);

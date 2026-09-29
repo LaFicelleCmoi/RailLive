@@ -11,8 +11,10 @@ import { LiveDot } from '@/components/ui/Badge';
 import { MAP_FONT, MapView } from '@/components/map/MapView';
 import { FitBounds, GeoJsonLayer } from '@/components/map/layers';
 import { JourneyCard } from '@/components/JourneyCard/JourneyCard';
-import { journeyFC, journeyPoints, journeyStopsFC } from '@/components/JourneyCard/journeyUtils';
+import { journeyFC, journeyPoints, journeyStopsFC, ptStopsOf } from '@/components/JourneyCard/journeyUtils';
 import { useJourneys } from '@/api/hooks/journeys';
+import { useRailPath } from '@/api/hooks/trains';
+import type { LngLat } from '@/utils/geo';
 import { FORBIDDABLE } from '@/utils/modes';
 import { fromDateTimeLocal, toDateTimeLocal, toNavitiaDate } from '@/utils/navitiaDate';
 import type { Params } from '@/api/client';
@@ -105,7 +107,16 @@ export default function JourneysPage() {
     setTo(from);
   };
 
-  const allFC = useMemo(() => journeyFC(current), [current]);
+  // Sections en train : tracé sur les rails entre les arrêts desservis
+  const pt = useMemo(() => ptStopsOf(current), [current]);
+  const rail = useRailPath(pt.points.length > 1 ? pt.points : null);
+  const overrides = useMemo(() => {
+    const m = new Map<string, LngLat[]>();
+    if (!rail.data) return m;
+    for (const [id, [a, b]] of pt.ranges) m.set(id, rail.data.slice(a, b).flatMap((seg, i) => (i === 0 ? seg : seg.slice(1))));
+    return m;
+  }, [rail.data, pt]);
+  const allFC = useMemo(() => journeyFC(current, true, overrides), [current, overrides]);
   const stopsFC = useMemo(() => journeyStopsFC(current), [current]);
   const points = useMemo(() => journeyPoints(current), [current]);
 

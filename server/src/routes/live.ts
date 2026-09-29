@@ -4,6 +4,7 @@ import { LRUCache } from 'lru-cache';
 import { sncfJson, UpstreamError } from '../sncf.js';
 import { hms, parisMidnightEpoch, toApiDate } from '../utils/time.js';
 import { log } from '../utils/redact.js';
+import { railSegment } from '../rail/graph.js';
 
 /**
  * Carte live : agrégation serveur des circulations en cours.
@@ -80,6 +81,8 @@ export interface LiveTrain {
   dl: number;
   msg?: string;
   s: CompactStop[];
+  /** Index dans `segments` du tracé entre arrêts successifs ; -1 = pas de géométrie ferroviaire (ligne droite) */
+  p?: number[];
 }
 
 const Query = z.object({
@@ -242,10 +245,24 @@ liveRouter.get('/trains', async (req, res) => {
       const last = t.s[t.s.length - 1]!;
       return first[3] <= now + 600 && last[2] >= now - 120;
     });
+    // Tracés sur les rails, dédoublonnés : de nombreux trains partagent les mêmes tronçons
+    const segments: string[] = [];
+    const segIndex = new Map<string, number>();
     for (const t of trains) {
       // Retard courant : celui du prochain arrêt non atteint
       const next = t.s.find((s) => s[2] >= now) ?? t.s[t.s.length - 1]!;
       t.dl = next[4];
+      t.p = t.s.slice(1).map((b, i) => {
+        const enc = railSegment([t.s[i]![0], t.s[i]![1]], [b[0], b[1]]);
+        if (!enc) return -1;
+        let idx = segIndex.get(enc);
+        if (idx === undefined) {
+          idx = segments.length;
+          segments.push(enc);
+          segIndex.set(enc, idx);
+        }
+        return idx;
+      });
     }
 
     res.setHeader('Cache-Control', 'private, max-age=30');
@@ -255,6 +272,7 @@ liveRouter.get('/trains', async (req, res) => {
       count: trains.length,
       regional: regionalCount,
       radiusKm: usedRadius,
+      segments,
       trains,
     });
   } catch (err) {

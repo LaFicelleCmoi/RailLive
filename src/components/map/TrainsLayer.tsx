@@ -3,7 +3,8 @@ import type { GeoJSONSource, MapLayerMouseEvent } from 'maplibre-gl';
 import type { Feature, FeatureCollection, Point } from 'geojson';
 import { isMapAlive, safeCleanup, useMap, MAP_FONT_BOLD } from './MapView';
 import type { LiveTrain } from '@/api/hooks/trains';
-import { interpolatePosition, type TimedStop } from '@/utils/interpolate';
+import { interpolatePosition, preparePath, type PreparedPath, type TimedStop } from '@/utils/interpolate';
+import { decodePolyline } from '@/utils/polyline';
 import { MODE_META } from '@/utils/modes';
 
 const SOURCE = 'live-trains';
@@ -20,19 +21,32 @@ interface Prepared {
  * Couche des trains animés. Les positions sont calculées côté client à chaque image
  * (requestAnimationFrame) par interpolation entre deux gares ; aucune requête réseau par image.
  */
+/** Tracé préparé du tronçon i → i+1 d'un train (undefined = ligne droite). */
+export function pathFor(t: LiveTrain, i: number, segments: string[] | undefined, cache: Map<string, PreparedPath | undefined>) {
+  const idx = t.p?.[i];
+  const enc = idx !== undefined && idx >= 0 ? segments?.[idx] : undefined;
+  if (!enc) return undefined;
+  if (!cache.has(enc)) cache.set(enc, preparePath(decodePolyline(enc)));
+  return cache.get(enc);
+}
+
 export function TrainsLayer({
   trains,
+  segments,
   selected,
   onSelect,
   onFrame,
 }: {
   trains: LiveTrain[];
+  segments?: string[];
   selected: string | null;
   onSelect: (id: string | null) => void;
   onFrame?: (visible: number) => void;
 }) {
   const map = useMap();
   const prepared = useRef<Prepared[]>([]);
+  /** Tracés décodés, conservés d'un rafraîchissement à l'autre (clé : polyligne encodée) */
+  const pathCache = useRef(new Map<string, PreparedPath | undefined>());
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const selectRef = useRef(onSelect);
@@ -43,10 +57,10 @@ export function TrainsLayer({
   useEffect(() => {
     prepared.current = trains.map((t) => ({
       t,
-      stops: t.s.map(([lon, lat, a, d]) => ({ lon, lat, a, d })),
+      stops: t.s.map(([lon, lat, a, d], i) => ({ lon, lat, a, d, path: pathFor(t, i, segments, pathCache.current) })),
       color: MODE_META[t.m]?.color ?? '#b8c2d3',
     }));
-  }, [trains]);
+  }, [trains, segments]);
 
   useEffect(() => {
     if (!map) return;

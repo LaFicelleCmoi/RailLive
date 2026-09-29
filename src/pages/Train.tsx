@@ -13,10 +13,10 @@ import { Timeline, type TimelineItem } from '@/components/Timeline/Timeline';
 import { CalendarGrid } from '@/components/CalendarGrid/CalendarGrid';
 import { MapView } from '@/components/map/MapView';
 import { FitBounds, GeoJsonLayer, pointsFC } from '@/components/map/layers';
-import { useTrainsByNumber, useVehicleJourney, useVehicleJourneyLine } from '@/api/hooks/trains';
+import { useRailPath, useTrainsByNumber, useVehicleJourney, useVehicleJourneyLine } from '@/api/hooks/trains';
 import { useRegion } from '@/api/hooks/meta';
 import { buildTimeline, trainStatus } from '@/utils/vehicleJourney';
-import { interpolatePosition } from '@/utils/interpolate';
+import { interpolatePosition, preparePath } from '@/utils/interpolate';
 import { classifyMode, MODE_META } from '@/utils/modes';
 import { formatDuration, formatTime } from '@/utils/navitiaDate';
 import { useNow } from '@/utils/hooks';
@@ -63,16 +63,29 @@ export default function TrainPage() {
     cause: s.cause,
   }));
 
-  // Carte : tracé et position estimée
-  const path = useMemo<LngLat[]>(() => valid.filter((s) => s.lon !== undefined).map((s) => [s.lon!, s.lat!]), [valid]);
+  // Carte : tracé sur les rails et position estimée
+  const located = useMemo(() => valid.filter((s) => s.lon !== undefined), [valid]);
+  const path = useMemo<LngLat[]>(() => located.map((s) => [s.lon!, s.lat!]), [located]);
+  const rail = useRailPath(path.length > 1 ? path : null);
+  const railLine = useMemo<LngLat[]>(() => (rail.data ? rail.data.flatMap((seg, i) => (i === 0 ? seg : seg.slice(1))) : path), [rail.data, path]);
   const pathFC = useMemo<FeatureCollection>(
-    () => ({ type: 'FeatureCollection', features: path.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: path } }] : [] }),
-    [path],
+    () => ({
+      type: 'FeatureCollection',
+      features: railLine.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: railLine } }] : [],
+    }),
+    [railLine],
   );
-  const stopsFC = useMemo(() => pointsFC(valid.filter((s) => s.lon !== undefined).map((s, i) => ({ id: `${s.id}-${i}`, lngLat: [s.lon!, s.lat!] as LngLat, props: { name: s.name } }))), [valid]);
+  const stopsFC = useMemo(() => pointsFC(located.map((s, i) => ({ id: `${s.id}-${i}`, lngLat: [s.lon!, s.lat!] as LngLat, props: { name: s.name } }))), [located]);
   const timed = useMemo(
-    () => valid.filter((s) => s.lon !== undefined).map((s) => ({ lon: s.lon!, lat: s.lat!, a: s.arr.getTime() / 1000, d: s.dep.getTime() / 1000 })),
-    [valid],
+    () =>
+      located.map((s, i) => ({
+        lon: s.lon!,
+        lat: s.lat!,
+        a: s.arr.getTime() / 1000,
+        d: s.dep.getTime() / 1000,
+        path: rail.data?.[i] ? preparePath(rail.data[i]!) : undefined,
+      })),
+    [located, rail.data],
   );
   const pos = status === 'running' ? interpolatePosition(timed, now.getTime() / 1000) : null;
   const posFC = useMemo(() => pointsFC(pos ? [{ id: 'train', lngLat: [pos.lon, pos.lat] }] : []), [pos?.lon, pos?.lat]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -164,11 +177,11 @@ export default function TrainPage() {
                   { id: 'train-pos-dot', type: 'circle', paint: { 'circle-radius': 6, 'circle-color': color, 'circle-stroke-color': '#05080f', 'circle-stroke-width': 2 } },
                 ]}
               />
-              <FitBounds points={path} padding={30} maxZoom={11} />
+              <FitBounds points={railLine} padding={30} maxZoom={11} />
             </MapView>
           </div>
           <p className="-mt-3 flex items-center gap-1.5 text-[11px] text-ink-500">
-            <MapPinned className="size-3.5" /> Position estimée par interpolation entre les gares (pas de GPS).
+            <MapPinned className="size-3.5" /> Position estimée le long des voies d’après les horaires (pas de GPS).
             <Link to={`/live`} className="ml-auto text-info-300 hover:text-info-400">
               Carte live →
             </Link>

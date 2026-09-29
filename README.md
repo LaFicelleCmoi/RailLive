@@ -101,11 +101,23 @@ railhub/
 - Cache mémoire avec TTL : 30 s (horaires, perturbations), 2 min (itinéraires), 10 min (isochrones), 1 h (autocomplétion), 24 h (référentiel).
 - Build minifié, **sans source maps** ; le serveur renvoie 404 sur toute requête `*.map`.
 
+## Tracés sur les voies
+
+L’API SNCF ne fournit pas la géométrie des voies. Au démarrage, le serveur télécharge le jeu open data
+**« Lignes par statut »** de SNCF Réseau (≈ 9 Mo, [licence ODbL](https://opendatacommons.org/licenses/odbl/)), le met en cache dans
+`server/data/` (rafraîchi tous les 30 jours) et construit un graphe des lignes **exploitées** du Réseau Ferré National.
+Pour chaque paire de gares successives, il calcule le plus court chemin sur les rails (A*), le simplifie et le met en cache.
+Les trains de la carte live, la fiche train, la fiche ligne et les itinéraires suivent ainsi les vraies voies.
+
+- `GET /api/geo/rail?pts=lon,lat;lon,lat;…` : tracés encodés (polyline) entre points successifs.
+- `GET /api/geo/rail/status` : état du graphe (nœuds, tronçons, date de chargement).
+
 ## Limites connues
 
 - **Positions estimées** : l’API SNCF ne fournit aucune position GPS. Les trains de la carte live (et la position
-  affichée sur la fiche d’un train) sont placés par interpolation entre deux gares, d’après les horaires temps réel.
-  Le tracé entre deux gares est une ligne droite (la géométrie des voies n’est pas fournie).
+  affichée sur la fiche d’un train) sont placés le long des voies d’après les horaires temps réel, pas mesurés.
+  Là où le RFN ne couvre pas le trajet (tronçons RATP des RER A/B, lignes étrangères, lignes non exploitées),
+  le tracé retombe sur une ligne droite entre les deux gares.
 - **Quota** : l’API SNCF ne renvoie pas de compteur. Le proxy compte ses propres appels (`DAILY_QUOTA`, 5 000/jour par défaut —
   ajustez selon votre abonnement). Au-delà, les réponses en cache restent servies et l’interface affiche un écran « quota atteint ».
   La carte live coûte au plus 3 appels (vue nationale) + 2 (zoom régional) par créneau de 5 minutes, partagés entre tous les visiteurs.
